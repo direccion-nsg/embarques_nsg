@@ -28,6 +28,15 @@ ETIQUETAS_ROL = {
     "direccion": "Dirección",
 }
 
+# Página de inicio por rol (a dónde redirigir si el rol no tiene acceso a la página actual)
+LANDING_PAGE = {
+    "admin":     "app.py",
+    "finanzas":  "app.py",
+    "ventas":    "pages/2_Historial.py",
+    "planta":    "pages/7_Planta.py",
+    "direccion": "pages/2_Historial.py",
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Clientes Supabase
@@ -110,6 +119,9 @@ def require_auth(permiso: str = None):
         st.stop()
 
     if permiso and not puede(permiso):
+        landing = LANDING_PAGE.get(user.get("role", ""))
+        if landing:
+            st.switch_page(landing)
         st.error("🚫 No tienes permiso para acceder a esta sección.")
         st.caption(f"Tu rol es: **{ETIQUETAS_ROL.get(user.get('role',''), user.get('role',''))}**")
         st.stop()
