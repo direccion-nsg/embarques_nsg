@@ -7,10 +7,13 @@ ya que la app corre en la nube y no puede adjuntar archivos directamente.
 
 import os
 import sys
+import smtplib
 import subprocess
 import urllib.parse
 import webbrowser
 from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
@@ -91,6 +94,72 @@ def construir_mailto_multiple(items: list, url_pdf: str = "") -> str:
 
 def abrir_mailto_multiple(items: list, url_pdf: str = ""):
     webbrowser.open(construir_mailto_multiple(items, url_pdf))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Envío SMTP automático — notificación a planta/almacén
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _smtp_cfg() -> dict:
+    """Lee credenciales SMTP desde st.secrets o variables de entorno."""
+    try:
+        import streamlit as st
+        cfg = st.secrets.get("email", {})
+    except Exception:
+        cfg = {}
+    return {
+        "server":       cfg.get("smtp_server")   or os.environ.get("EMAIL_SMTP_SERVER", ""),
+        "port":         int(cfg.get("smtp_port",  587)),
+        "usuario":      cfg.get("usuario")        or os.environ.get("EMAIL_USUARIO", ""),
+        "password":     cfg.get("password")       or os.environ.get("EMAIL_PASSWORD", ""),
+        "destinatario": cfg.get("destinatario")   or EMAIL_DESTINO,
+    }
+
+
+def enviar_email_planta(items: list, url_pdf: str = "", enviado_por: str = "") -> tuple:
+    """
+    Envía email de notificación a almacén al marcar embarques como 'Enviado a Planta'.
+    Retorna (True, "") o (False, mensaje_error).
+    """
+    cfg = _smtp_cfg()
+    if not all([cfg["server"], cfg["usuario"], cfg["password"]]):
+        return False, "Credenciales SMTP no configuradas en [email] de secrets."
+
+    fecha  = datetime.now().strftime("%d/%m/%Y %H:%M")
+    n      = len(items)
+    lista  = _lista_embarques_texto(items)
+    asunto = (
+        f"🏭 {'Embarque listo' if n == 1 else f'{n} Embarques listos'} para Planta — {fecha}"
+    )
+    cuerpo = (
+        f"Buen día equipo Planta/Almacén.\n\n"
+        f"{'El siguiente embarque ha sido' if n == 1 else f'Los siguientes {n} embarques han sido'} "
+        f"enviado(s) a Planta para preparación y despacho:\n\n"
+        f"{lista}\n\n"
+    )
+    if url_pdf:
+        cuerpo += f"📎 PDF con paquetes de embarque (válido 7 días):\n{url_pdf}\n\n"
+    cuerpo += (
+        f"Favor de preparar conforme a la hoja logística incluida en el PDF.\n\n"
+        f"Enviado por: {enviado_por or 'Sistema NSG'}\n"
+        f"Fecha y hora: {fecha}\n"
+    )
+
+    msg = MIMEMultipart()
+    msg["From"]    = cfg["usuario"]
+    msg["To"]      = cfg["destinatario"]
+    msg["Subject"] = asunto
+    msg.attach(MIMEText(cuerpo, "plain", "utf-8"))
+
+    try:
+        with smtplib.SMTP(cfg["server"], cfg["port"], timeout=15) as srv:
+            srv.ehlo()
+            srv.starttls()
+            srv.login(cfg["usuario"], cfg["password"])
+            srv.send_message(msg)
+        return True, ""
+    except Exception as e:
+        return False, str(e)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

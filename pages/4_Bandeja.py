@@ -33,6 +33,7 @@ from modules.storage import subir_pdf_combinado, generar_url_firmada
 from modules.messaging import (
     construir_mensaje_teams_multiple,
     abrir_mailto_multiple,
+    enviar_email_planta,
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -189,6 +190,13 @@ with ac3:
                 st.error(f"Error en {item.get('folio_bind','?')}: {ex}")
         if enviados:
             st.success(f"✅ {enviados} embarque(s) marcados como **Enviado a Planta**.")
+            url_notif    = st.session_state.get("url_pdf_multi", "")
+            nombre_user  = st.session_state.get("_auth_user", {}).get("nombre", "")
+            ok_mail, err = enviar_email_planta(items_sel, url_notif, nombre_user)
+            if ok_mail:
+                st.info("📧 Notificación enviada a almacén.")
+            else:
+                st.warning(f"Embarques actualizados, pero no se pudo enviar el email: {err}")
             st.session_state["bandeja"] = db_get_bandeja()
             st.rerun()
         else:
