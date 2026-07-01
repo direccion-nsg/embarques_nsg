@@ -23,11 +23,15 @@ def _pool() -> psycopg2.pool.ThreadedConnectionPool:
         dsn = st.secrets["database"]["url"]
     except Exception:
         dsn = os.environ.get("DATABASE_URL", "")
+    # sslmode va en el DSN, no en options (es parámetro libpq, no GUC)
+    if "sslmode" not in dsn:
+        sep = "&" if "?" in dsn else "?"
+        dsn = f"{dsn}{sep}sslmode=require"
     return psycopg2.pool.ThreadedConnectionPool(
         minconn=1,
         maxconn=20,
         dsn=dsn,
-        options="-c search_path=prep_embarques -c sslmode=require",
+        options="-c search_path=prep_embarques",
     )
 
 
