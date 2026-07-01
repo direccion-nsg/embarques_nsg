@@ -16,7 +16,7 @@ ROLES = {
     "admin":     {"nuevo", "historial", "catalogo", "bandeja", "guias", "usuarios", "planta"},
     "finanzas":  {"nuevo", "historial", "catalogo", "bandeja", "guias"},
     "ventas":    {"historial", "guias"},
-    "planta":    {"planta"},
+    "planta":    {"planta", "historial"},
     "direccion": {"historial", "bandeja", "guias", "planta"},
 }
 
