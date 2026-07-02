@@ -193,6 +193,17 @@ st.divider()
 
 st.markdown("### 1 — Subir Hoja de Salida Bind")
 
+if "_flash_extraido" in st.session_state:
+    _fl = st.session_state.pop("_flash_extraido")
+    if _fl.get("error"):
+        st.error(_fl["error"])
+    elif _fl.get("existente"):
+        st.info(_fl["msg"])
+    else:
+        st.success(_fl["msg"])
+    if _fl.get("correccion"):
+        st.info(_fl["correccion"])
+
 archivos = st.file_uploader(
     "Selecciona el/los PDF(s) de salida Bind",
     type=["pdf"],
@@ -263,21 +274,10 @@ if archivos:
                 st.session_state["sel_flet"] = "— Manual —"
                 st.session_state["flet_nom"] = fletera_sug
 
-        if datos.get("error"):
-            st.error(f"Error al leer el PDF: {datos['error']}")
-        elif salida_existente:
-            n_emb = len(salida_existente.get("embarques", []))
-            st.info(
-                f"📋 Folio **{folio}** ya tiene **{n_emb}** embarque(s) registrado(s) "
-                f"(estado: **{salida_existente.get('estado','—')}**). "
-                "Se cargaron las cantidades pendientes."
-            )
-        else:
-            st.success(f"Extraído: **{datos.get('folio','—')}** | {datos.get('cliente','—')}")
-
         # Modo corrección: pre-cargar datos logísticos desde el embarque original
         _edit_emb_id = st.session_state.pop("_editar_embarque_id", None)
         st.session_state.pop("_editar_folio", None)
+        _correccion_msg = None
         if _edit_emb_id and not datos.get("error"):
             _emb_orig = get_embarque_por_id(_edit_emb_id)
             if _emb_orig:
@@ -323,7 +323,28 @@ if archivos:
                     "observaciones":            _emb_orig.get("observaciones", ""),
                     "pedido_interno":           _emb_orig.get("pedido_interno", ""),
                 }
-                st.info("✏️ Datos logísticos pre-cargados. Revisa el **Paso 3**, corrige lo necesario y regenera el paquete.")
+                _correccion_msg = "✏️ Datos logísticos pre-cargados. Revisa el **Paso 3**, corrige lo necesario y regenera el paquete."
+
+        # Guardar mensaje y relanzar para que el sidebar vea el estado actualizado
+        if datos.get("error"):
+            st.session_state["_flash_extraido"] = {"error": f"Error al leer el PDF: {datos['error']}"}
+        elif salida_existente:
+            n_emb = len(salida_existente.get("embarques", []))
+            st.session_state["_flash_extraido"] = {
+                "existente": True,
+                "msg": (
+                    f"📋 Folio **{folio}** ya tiene **{n_emb}** embarque(s) registrado(s) "
+                    f"(estado: **{salida_existente.get('estado','—')}**). "
+                    "Se cargaron las cantidades pendientes."
+                ),
+                "correccion": _correccion_msg,
+            }
+        else:
+            st.session_state["_flash_extraido"] = {
+                "msg": f"Extraído: **{datos.get('folio','—')}** | {datos.get('cliente','—')}",
+                "correccion": _correccion_msg,
+            }
+        st.rerun()
 
 st.divider()
 
