@@ -787,10 +787,10 @@ def _paso3(datos_bind):
             pi1, _ = st.columns([1, 2])
             with pi1:
                 pedido_interno = st.text_input(
-                    "Pedido interno de Planta (opcional)",
-                    placeholder="Ej. P001  ó  P001, P002",
+                    "Pedido interno de Planta *",
+                    placeholder="Ej. P001, P002  |  Muestras  |  Salida interna",
                     key="ped_int",
-                    help="Número(s) de pedido internos de Planta. Si son varios, sepáralos con coma. Se puede buscar por número individual en el Historial.",
+                    help="Requerido. Número(s) de pedido de Planta separados por coma. Para embarques sin pedido usa: Muestras, Salida interna u otra descripción corta.",
                 )
     
             # ── Sección remisión ───────────────────────────────────────────────────
@@ -938,7 +938,12 @@ else:
     else:
         st.info("📄 Paquete: **Hoja Logística → Hoja de Salida Bind**")
 
-    btn_disabled = bool(errores_val) or (bool(warnings_val) and not confirmar)
+    _sin_pedido = not datos_log.get("pedido_interno", "").strip()
+    if _sin_pedido:
+        st.error("⚠️ Captura el **Pedido interno de Planta** en el Paso 3 antes de generar. "
+                 "Si no hay pedido, escribe «Muestras» o «Salida interna».")
+
+    btn_disabled = bool(errores_val) or (bool(warnings_val) and not confirmar) or _sin_pedido
 
     if st.button(
         "📦 Generar Paquete de Embarque",
