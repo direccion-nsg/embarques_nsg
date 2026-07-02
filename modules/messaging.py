@@ -162,6 +162,52 @@ def enviar_email_planta(items: list, url_pdf: str = "", enviado_por: str = "") -
         return False, str(e)
 
 
+def enviar_email_regreso_planta(emb: dict, motivo: str) -> tuple:
+    """
+    Notifica a Finanzas que Planta regresó un embarque a la Bandeja.
+    Retorna (True, "") o (False, mensaje_error).
+    """
+    cfg = _smtp_cfg()
+    if not all([cfg["server"], cfg["usuario"], cfg["password"]]):
+        return False, "Credenciales SMTP no configuradas en [email] de secrets."
+
+    fecha   = datetime.now().strftime("%d/%m/%Y %H:%M")
+    folio   = emb.get("folios_bind") or emb.get("folio_bind", "—")
+    cliente = emb.get("clientes")    or emb.get("cliente", "—")
+    dest    = emb.get("destinatario_nombre", "—")
+    fletera = emb.get("fletera", "—")
+
+    asunto = f"⚠️ Embarque {folio} regresado a Bandeja por Planta — {fecha}"
+    cuerpo = (
+        f"Equipo Finanzas.\n\n"
+        f"El equipo de Planta/Almacén regresó el siguiente embarque a la Bandeja:\n\n"
+        f"  Folio Bind:   {folio}\n"
+        f"  Cliente:      {cliente}\n"
+        f"  Destinatario: {dest}\n"
+        f"  Fletera:      {fletera}\n\n"
+        f"Motivo indicado por Planta:\n"
+        f"  {motivo}\n\n"
+        f"Por favor revisa y corrige el embarque en la Bandeja antes de reenviarlo a Planta.\n\n"
+        f"Fecha y hora: {fecha}\n"
+    )
+
+    msg = MIMEMultipart()
+    msg["From"]    = cfg["usuario"]
+    msg["To"]      = "finanzas@gruponsg.com"
+    msg["Subject"] = asunto
+    msg.attach(MIMEText(cuerpo, "plain", "utf-8"))
+
+    try:
+        with smtplib.SMTP(cfg["server"], cfg["port"], timeout=15) as srv:
+            srv.ehlo()
+            srv.starttls()
+            srv.login(cfg["usuario"], cfg["password"])
+            srv.send_message(msg)
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Utilidades de carpeta
 # ──────────────────────────────────────────────────────────────────────────────

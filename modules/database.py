@@ -97,6 +97,9 @@ def init_database():
         _execute(conn,
             "ALTER TABLE embarques ADD COLUMN IF NOT EXISTS impreso BOOLEAN DEFAULT FALSE"
         )
+        _execute(conn,
+            "ALTER TABLE embarques ADD COLUMN IF NOT EXISTS motivo_regreso TEXT DEFAULT ''"
+        )
         conn.commit()
         row = _fetchone(conn, "SELECT COUNT(*) AS n FROM remitentes")
         if row and int(row["n"]) == 0:
@@ -722,13 +725,13 @@ def cancelar_embarque(embarque_id: int):
         _release(conn)
 
 
-def regresar_embarque_a_bandeja(embarque_id: int):
+def regresar_embarque_a_bandeja(embarque_id: int, motivo: str = ""):
     """Revierte un embarque a 'Preparado' y lo regresa a la bandeja de Finanzas."""
     conn = get_connection()
     try:
         _execute(conn,
-            "UPDATE embarques SET estado_embarque='Preparado', en_bandeja=1 WHERE id=%s",
-            (embarque_id,),
+            "UPDATE embarques SET estado_embarque='Preparado', en_bandeja=1, motivo_regreso=%s WHERE id=%s",
+            (motivo, embarque_id),
         )
         conn.commit()
     except Exception:
@@ -915,7 +918,8 @@ def get_bandeja() -> list:
                    e.fletera, e.tipo_entrega, e.condicion_flete,
                    e.con_remision, e.empresa_remision, e.numero_remision,
                    e.observaciones, e.ruta_pdf_generado,
-                   e.estado_embarque, e.created_at, e.pedido_interno
+                   e.estado_embarque, e.created_at, e.pedido_interno,
+                   e.motivo_regreso
             FROM embarques e
             LEFT JOIN embarque_salidas es ON es.embarque_id = e.id
             LEFT JOIN salidas_bind     s  ON s.id = es.salida_id

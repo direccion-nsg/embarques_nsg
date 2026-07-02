@@ -20,6 +20,7 @@ from modules.database import (
     marcar_impreso,
 )
 from modules.storage import descargar_pdf_bytes
+from modules.messaging import enviar_email_regreso_planta
 from modules.sidebar import render_sidebar
 from modules.auth import require_auth
 
@@ -40,7 +41,7 @@ render_sidebar(APP_NAME, VERSION)
 
 if st.session_state.get("_current_page") != "planta":
     for _k in list(st.session_state.keys()):
-        if _k.startswith(("_confirmar_emb_", "_confirmar_regreso_")):
+        if _k.startswith(("_confirmar_emb_", "_confirmar_regreso_", "_motivo_regreso_")):
             del st.session_state[_k]
 st.session_state["_current_page"] = "planta"
 
@@ -197,21 +198,35 @@ for emb in embarques:
         if st.session_state.get(f"_confirmar_regreso_{emb_id}"):
             st.warning(
                 f"¿Regresar el embarque **{folio}** a la Bandeja de Finanzas?\n\n"
-                "El estado volverá a **Preparado** y Finanzas lo verá en su bandeja."
+                "El estado volverá a **Preparado** y Finanzas recibirá una notificación por correo."
             )
+            _motivo_key = f"_motivo_regreso_{emb_id}"
+            st.text_area(
+                "Motivo del regreso — obligatorio (Finanzas lo verá en la Bandeja y por correo)",
+                placeholder="Ej. Fletera incorrecta, destinatario equivocado, cantidad no coincide...",
+                key=_motivo_key,
+                height=80,
+            )
+            _motivo_val = st.session_state.get(_motivo_key, "").strip()
             br1, br2 = st.columns(2)
             if br1.button("↩ Sí, regresar", key=f"conf_reg_si_{emb_id}", type="primary",
-                          use_container_width=True):
+                          use_container_width=True, disabled=not _motivo_val):
                 try:
-                    regresar_embarque_a_bandeja(emb_id)
+                    regresar_embarque_a_bandeja(emb_id, _motivo_val)
+                    ok_mail, err_mail = enviar_email_regreso_planta(emb, _motivo_val)
                     st.session_state.pop(f"_confirmar_regreso_{emb_id}", None)
-                    st.success(f"↩ Embarque **{folio}** regresado a la Bandeja.")
+                    st.session_state.pop(_motivo_key, None)
+                    if ok_mail:
+                        st.success(f"↩ Embarque **{folio}** regresado. Finanzas fue notificado por correo.")
+                    else:
+                        st.warning(f"↩ Embarque regresado, pero no se pudo enviar el email: {err_mail}")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error: {e}")
             if br2.button("No, mantener aquí", key=f"conf_reg_no_{emb_id}",
                           use_container_width=True):
                 st.session_state.pop(f"_confirmar_regreso_{emb_id}", None)
+                st.session_state.pop(_motivo_key, None)
                 st.rerun()
 
 

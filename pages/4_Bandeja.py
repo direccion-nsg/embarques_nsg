@@ -99,7 +99,11 @@ for idx, item in enumerate(bandeja):
     if sel:
         seleccionados.append(idx)
 
-    cols[1].write(item.get("folio_bind","—"))
+    _folio_txt = item.get("folio_bind","—")
+    if item.get("motivo_regreso"):
+        cols[1].markdown(f"**{_folio_txt}** ⚠️")
+    else:
+        cols[1].write(_folio_txt)
     cols[2].write(item.get("cliente","—"))
     cols[3].write(item.get("destinatario_nombre","—"))
     cols[4].write(item.get("fletera","—"))
@@ -178,6 +182,9 @@ for idx, item in enumerate(bandeja):
         f"→ {item.get('destinatario_nombre','—')} | {item.get('fletera','—')}{remision_badge}",
         expanded=False,
     ):
+        if item.get("motivo_regreso"):
+            st.warning(f"⚠️ **Regresado por Planta:** {item['motivo_regreso']}")
+
         dc1, dc2 = st.columns(2)
         with dc1:
             st.markdown(f"**Folio Bind:** {item.get('folio_bind','—')}")
