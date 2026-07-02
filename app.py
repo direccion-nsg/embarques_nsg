@@ -158,6 +158,7 @@ def _resetear_flujo():
 # ──────────────────────────────────────────────────────────────────────────────
 
 render_sidebar(APP_NAME, VERSION)
+st.session_state["_current_page"] = "nuevo_embarque"
 
 st.markdown(f'<p class="titulo-nsg">📦 {APP_NAME}</p>', unsafe_allow_html=True)
 st.markdown(
@@ -507,6 +508,9 @@ with st.expander(
                             "el PDF Bind se incluirá como referencia en el paquete."
                         )
 
+if datos_bind and not st.session_state.get("datos_logisticos"):
+    st.info("👆 Revisa los datos del Paso 2 y luego abre el **Paso 3 — Datos logísticos** para capturar fletera, destinatario y condiciones de entrega.")
+
 st.divider()
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -515,7 +519,7 @@ st.divider()
 
 with st.expander(
     "3 — Capturar datos logísticos",
-    expanded=(st.session_state["paso"] >= 2 and bool(datos_bind)),
+    expanded=(bool(st.session_state.get("datos_logisticos")) and bool(datos_bind)),
 ):
     if not datos_bind:
         st.info("Completa el Paso 1 primero.")
@@ -1176,6 +1180,8 @@ else:
 
     if bytes_paq:
         st.markdown("---")
+        if not st.session_state.get("en_bandeja"):
+            st.info("📦 **Siguiente paso:** descarga el PDF y luego usa **➕ Agregar a Bandeja** para enviarlo a Planta desde la sección Bandeja.")
         col_dl, col_add, col_mail = st.columns(3)
 
         with col_dl:

@@ -39,6 +39,12 @@ init_database()
 require_auth("planta")
 render_sidebar(APP_NAME, VERSION)
 
+if st.session_state.get("_current_page") != "planta":
+    for _k in list(st.session_state.keys()):
+        if _k.startswith(("_confirmar_emb_", "_confirmar_regreso_", "_confirmar_cancel_planta_")):
+            del st.session_state[_k]
+st.session_state["_current_page"] = "planta"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Encabezado
 # ──────────────────────────────────────────────────────────────────────────────
@@ -59,6 +65,11 @@ embarques = get_embarques_filtrados(estado_embarque="Enviado a Planta")
 
 if not embarques:
     st.info("✅ No hay embarques pendientes en este momento.")
+    st.markdown(
+        "Cuando Finanzas envíe embarques a Planta desde la **Bandeja**, aparecerán aquí. "
+        "Mientras tanto puedes revisar el historial completo."
+    )
+    st.page_link("pages/2_Historial.py", label="📋 Ver Historial")
     st.stop()
 
 st.markdown(f"**{len(embarques)} embarque(s) pendiente(s) de despacho:**")
@@ -251,4 +262,4 @@ for emb in embarques:
                 st.rerun()
 
 st.divider()
-st.caption("Una vez que el chofer entregue la guía, Finanzas o Ventas la registra en la sección **Guías**.")
+st.info("📋 Una vez que el chofer entregue la guía de embarque, Finanzas o Ventas la registra en la sección **Guías**.")

@@ -23,6 +23,15 @@ init_database()
 require_auth("catalogo")
 render_sidebar(APP_NAME, VERSION)
 
+if st.session_state.get("_current_page") != "catalogos":
+    for _k in list(st.session_state.keys()):
+        if _k.startswith("_confirm_del_"):
+            del st.session_state[_k]
+st.session_state["_current_page"] = "catalogos"
+
+if "_cat_msg" in st.session_state:
+    st.success(st.session_state.pop("_cat_msg"))
+
 st.markdown("## 📚 Catálogos")
 st.markdown("Administra remitentes, destinatarios, fleteras y domicilios de entrega.")
 st.divider()
@@ -57,13 +66,22 @@ with tab1:
                             "direccion": new_dir,
                             "telefono": new_tel,
                         })
-                        st.success("Remitente actualizado.")
+                        st.session_state["_cat_msg"] = "Remitente actualizado."
                         st.rerun()
                 with c2:
                     if st.button("🗑 Desactivar", key=f"r_del_{r['id']}"):
-                        eliminar_remitente(r["id"])
-                        st.warning("Remitente desactivado.")
-                        st.rerun()
+                        st.session_state[f"_confirm_del_r_{r['id']}"] = True
+            if st.session_state.get(f"_confirm_del_r_{r['id']}"):
+                st.warning(f"¿Desactivar **{r['nombre']}**? Dejará de aparecer en los selectboxes de nuevo embarque.")
+                _ca, _cb = st.columns(2)
+                if _ca.button("Sí, desactivar", key=f"r_del_si_{r['id']}", type="primary", use_container_width=True):
+                    eliminar_remitente(r["id"])
+                    st.session_state.pop(f"_confirm_del_r_{r['id']}", None)
+                    st.session_state["_cat_msg"] = f"Remitente '{r['nombre']}' desactivado."
+                    st.rerun()
+                if _cb.button("Cancelar", key=f"r_del_no_{r['id']}", use_container_width=True):
+                    st.session_state.pop(f"_confirm_del_r_{r['id']}", None)
+                    st.rerun()
     else:
         st.info("No hay remitentes registrados.")
 
@@ -80,7 +98,7 @@ with tab1:
         if st.form_submit_button("➕ Agregar remitente"):
             if nr_nombre.strip():
                 guardar_remitente({"nombre": nr_nombre, "rfc": nr_rfc, "direccion": nr_dir, "telefono": nr_tel})
-                st.success(f"Remitente '{nr_nombre}' agregado.")
+                st.session_state["_cat_msg"] = f"Remitente '{nr_nombre}' agregado."
                 st.rerun()
             else:
                 st.error("El nombre es obligatorio.")
@@ -115,13 +133,22 @@ with tab2:
                             "telefono": dn_tel, "contacto": dn_contacto,
                             "referencias": dn_refs,
                         })
-                        st.success("Destinatario actualizado.")
+                        st.session_state["_cat_msg"] = "Destinatario actualizado."
                         st.rerun()
                 with c2:
                     if st.button("🗑 Desactivar", key=f"d_del_{d['id']}"):
-                        eliminar_destinatario(d["id"])
-                        st.warning("Destinatario desactivado.")
-                        st.rerun()
+                        st.session_state[f"_confirm_del_d_{d['id']}"] = True
+            if st.session_state.get(f"_confirm_del_d_{d['id']}"):
+                st.warning(f"¿Desactivar **{d['nombre']}**? Dejará de aparecer en los selectboxes de nuevo embarque.")
+                _da, _db = st.columns(2)
+                if _da.button("Sí, desactivar", key=f"d_del_si_{d['id']}", type="primary", use_container_width=True):
+                    eliminar_destinatario(d["id"])
+                    st.session_state.pop(f"_confirm_del_d_{d['id']}", None)
+                    st.session_state["_cat_msg"] = f"Destinatario '{d['nombre']}' desactivado."
+                    st.rerun()
+                if _db.button("Cancelar", key=f"d_del_no_{d['id']}", use_container_width=True):
+                    st.session_state.pop(f"_confirm_del_d_{d['id']}", None)
+                    st.rerun()
     else:
         st.info("No hay destinatarios registrados.")
 
@@ -145,7 +172,7 @@ with tab2:
                     "telefono": nd_tel, "contacto": nd_contacto,
                     "referencias": nd_refs,
                 })
-                st.success(f"Destinatario '{nd_nombre}' agregado.")
+                st.session_state["_cat_msg"] = f"Destinatario '{nd_nombre}' agregado."
                 st.rerun()
             else:
                 st.error("El nombre es obligatorio.")
@@ -166,13 +193,22 @@ with tab3:
                 with c1:
                     if st.button("💾 Guardar", key=f"f_save_{f['id']}"):
                         guardar_fletera({"id": f["id"], "nombre": nf_nombre})
-                        st.success("Fletera actualizada.")
+                        st.session_state["_cat_msg"] = "Fletera actualizada."
                         st.rerun()
                 with c2:
                     if st.button("🗑 Desactivar", key=f"f_del_{f['id']}"):
-                        eliminar_fletera(f["id"])
-                        st.warning("Fletera desactivada.")
-                        st.rerun()
+                        st.session_state[f"_confirm_del_f_{f['id']}"] = True
+            if st.session_state.get(f"_confirm_del_f_{f['id']}"):
+                st.warning(f"¿Desactivar **{f['nombre']}**? Dejará de aparecer en los selectboxes de nuevo embarque.")
+                _fa, _fb = st.columns(2)
+                if _fa.button("Sí, desactivar", key=f"f_del_si_{f['id']}", type="primary", use_container_width=True):
+                    eliminar_fletera(f["id"])
+                    st.session_state.pop(f"_confirm_del_f_{f['id']}", None)
+                    st.session_state["_cat_msg"] = f"Fletera '{f['nombre']}' desactivada."
+                    st.rerun()
+                if _fb.button("Cancelar", key=f"f_del_no_{f['id']}", use_container_width=True):
+                    st.session_state.pop(f"_confirm_del_f_{f['id']}", None)
+                    st.rerun()
     else:
         st.info("No hay fleteras registradas.")
 
@@ -183,7 +219,7 @@ with tab3:
         if st.form_submit_button("➕ Agregar fletera"):
             if nf_nuevo.strip():
                 guardar_fletera({"nombre": nf_nuevo})
-                st.success(f"Fletera '{nf_nuevo}' agregada.")
+                st.session_state["_cat_msg"] = f"Fletera '{nf_nuevo}' agregada."
                 st.rerun()
             else:
                 st.error("El nombre es obligatorio.")
@@ -218,13 +254,22 @@ with tab4:
                             "telefono": dd_tel, "contacto": dd_contacto,
                             "referencias": dd_refs,
                         })
-                        st.success("Domicilio actualizado.")
+                        st.session_state["_cat_msg"] = "Domicilio actualizado."
                         st.rerun()
                 with c2:
                     if st.button("🗑 Desactivar", key=f"de_del_{d['id']}"):
-                        eliminar_domicilio_entrega(d["id"])
-                        st.warning("Domicilio desactivado.")
-                        st.rerun()
+                        st.session_state[f"_confirm_del_de_{d['id']}"] = True
+            if st.session_state.get(f"_confirm_del_de_{d['id']}"):
+                st.warning(f"¿Desactivar **{d['nombre']}**? Dejará de aparecer en los selectboxes de nuevo embarque.")
+                _dea, _deb = st.columns(2)
+                if _dea.button("Sí, desactivar", key=f"de_del_si_{d['id']}", type="primary", use_container_width=True):
+                    eliminar_domicilio_entrega(d["id"])
+                    st.session_state.pop(f"_confirm_del_de_{d['id']}", None)
+                    st.session_state["_cat_msg"] = f"Domicilio '{d['nombre']}' desactivado."
+                    st.rerun()
+                if _deb.button("Cancelar", key=f"de_del_no_{d['id']}", use_container_width=True):
+                    st.session_state.pop(f"_confirm_del_de_{d['id']}", None)
+                    st.rerun()
     else:
         st.info("No hay domicilios de entrega registrados. Agrega el primero abajo.")
 
@@ -247,7 +292,7 @@ with tab4:
                     "telefono": nd_tel, "contacto": nd_contacto,
                     "referencias": nd_refs,
                 })
-                st.success(f"Domicilio '{nd_nombre}' agregado.")
+                st.session_state["_cat_msg"] = f"Domicilio '{nd_nombre}' agregado."
                 st.rerun()
             else:
                 st.error("El nombre / referencia es obligatorio.")

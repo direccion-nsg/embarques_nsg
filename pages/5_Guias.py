@@ -33,6 +33,14 @@ init_database()
 require_auth("guias")
 render_sidebar(APP_NAME, VERSION)
 
+# Limpiar embarque pre-seleccionado si el usuario llegó desde el sidebar
+# (no desde Historial — Historial setea _nav_to_guias_from_hist antes de switch_page)
+if st.session_state.get("_current_page") != "guias":
+    if not st.session_state.pop("_nav_to_guias_from_hist", False):
+        st.session_state["embarque_seleccionado"] = None
+    for _k in ("_ocr_guia", "_ocr_guia_emb"):
+        st.session_state.pop(_k, None)
+st.session_state["_current_page"] = "guias"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Estado de sesión
@@ -253,7 +261,8 @@ if emb_id:
 
 # ── Mensaje de éxito post-rerun ───────────────────────────────────────────────
 if st.session_state.get("guia_guardada"):
-    st.success("Guía guardada correctamente. La lista se actualizó.")
+    st.success("✅ Guía guardada correctamente. La lista se actualizó.")
+    st.page_link("pages/2_Historial.py", label="→ Ver en Historial", icon="📋")
     st.session_state["guia_guardada"] = False
 
 # ──────────────────────────────────────────────────────────────────────────────

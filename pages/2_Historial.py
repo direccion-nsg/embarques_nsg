@@ -50,6 +50,13 @@ init_database()
 require_auth("historial")
 render_sidebar(APP_NAME, VERSION)
 
+if st.session_state.get("_current_page") != "historial":
+    for _k in list(st.session_state.keys()):
+        if _k.startswith(("_hist_open_", "_ev_bytes_", "_conf_cancel_hist_")):
+            del st.session_state[_k]
+    for _k in ("_rep_excel", "_rep_csv", "_rep_filas"):
+        st.session_state.pop(_k, None)
+st.session_state["_current_page"] = "historial"
 
 st.markdown("""
 <style>
@@ -175,6 +182,9 @@ with st.expander("🔍 Filtros de búsqueda", expanded=True):
 # Consulta
 # ──────────────────────────────────────────────────────────────────────────────
 
+if buscar:
+    _salidas_cached.clear()
+
 estado_q  = "" if filtro_estado == "Todos" else filtro_estado
 desde_str = str(filtro_desde) if filtro_desde else ""
 hasta_str = str(filtro_hasta) if filtro_hasta else ""
@@ -189,7 +199,10 @@ salidas = _salidas_cached(
 # ──────────────────────────────────────────────────────────────────────────────
 
 if not salidas:
-    st.info("No se encontraron salidas con esos criterios.")
+    _hint = ""
+    if filtro_desde and (date.today() - filtro_desde).days < 91:
+        _hint = " Prueba a ampliar el rango de fechas — el filtro inicial muestra solo los últimos 90 días."
+    st.info(f"No se encontraron salidas con esos criterios.{_hint}")
     st.stop()
 
 st.markdown(f"**{len(salidas)} salida(s) encontrada(s)**")
@@ -496,6 +509,7 @@ for sal in salidas:
                         with pb:
                             if st.button(btn_lbl_guia, key=f"guia_emb_{_k}",
                                          type="primary"):
+                                st.session_state["_nav_to_guias_from_hist"] = True
                                 st.session_state["embarque_seleccionado"] = emb["id"]
                                 st.switch_page("pages/5_Guias.py")
 

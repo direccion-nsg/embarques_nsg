@@ -51,6 +51,14 @@ init_database()
 require_auth("bandeja")
 render_sidebar(APP_NAME, VERSION)
 
+if st.session_state.get("_current_page") != "bandeja":
+    for _k in list(st.session_state.keys()):
+        if _k.startswith("_confirmar_cancel_bnd_"):
+            del st.session_state[_k]
+    st.session_state.pop("mostrar_teams_msg", None)
+    st.session_state.pop("_confirm_vaciar", None)
+st.session_state["_current_page"] = "bandeja"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Encabezado
 # ──────────────────────────────────────────────────────────────────────────────
@@ -58,6 +66,14 @@ render_sidebar(APP_NAME, VERSION)
 st.markdown("## 📦 Bandeja de Embarques")
 st.caption("Embarques preparados en esta sesión — listos para enviar a Almacén Teoloyucan.")
 st.divider()
+
+if "_flash_planta" in st.session_state:
+    _fl = st.session_state.pop("_flash_planta")
+    st.success(f"✅ {_fl['n']} embarque(s) marcados como **Enviado a Planta**.")
+    if _fl["ok_mail"]:
+        st.info("📧 Notificación enviada a almacén.")
+    else:
+        st.warning(f"Embarques actualizados, pero no se pudo enviar el email: {_fl['err']}")
 
 # Siempre cargar desde DB para reflejar cambios de otras páginas
 st.session_state["bandeja"] = db_get_bandeja()
@@ -189,14 +205,10 @@ with ac3:
             except Exception as ex:
                 st.error(f"Error en {item.get('folio_bind','?')}: {ex}")
         if enviados:
-            st.success(f"✅ {enviados} embarque(s) marcados como **Enviado a Planta**.")
             url_notif    = st.session_state.get("url_pdf_multi", "")
             nombre_user  = st.session_state.get("_auth_user", {}).get("nombre", "")
             ok_mail, err = enviar_email_planta(items_sel, url_notif, nombre_user)
-            if ok_mail:
-                st.info("📧 Notificación enviada a almacén.")
-            else:
-                st.warning(f"Embarques actualizados, pero no se pudo enviar el email: {err}")
+            st.session_state["_flash_planta"] = {"n": enviados, "ok_mail": ok_mail, "err": err}
             st.session_state["bandeja"] = db_get_bandeja()
             st.rerun()
         else:
@@ -327,11 +339,20 @@ st.divider()
 col_vac1, col_vac2 = st.columns([1, 5])
 with col_vac1:
     if st.button("🗑 Vaciar bandeja", key="btn_vaciar"):
+        st.session_state["_confirm_vaciar"] = True
+with col_vac2:
+    st.caption("Vaciar quita todos los embarques de la bandeja de esta sesión. "
+               "Los PDFs y el historial permanecen disponibles en la sección Historial.")
+
+if st.session_state.get("_confirm_vaciar"):
+    st.warning("¿Vaciar toda la bandeja? Los embarques no se eliminarán del historial, solo saldrán de esta vista.")
+    _cv1, _cv2 = st.columns(2)
+    if _cv1.button("Sí, vaciar", key="conf_vaciar_si", type="primary", use_container_width=True):
         db_vaciar_bandeja()
         st.session_state["bandeja"] = []
-        for k in ["ruta_pdf_multi", "mostrar_teams_msg"]:
-            st.session_state.pop(k, None)
+        for _k in ["ruta_pdf_multi", "mostrar_teams_msg", "_confirm_vaciar"]:
+            st.session_state.pop(_k, None)
         st.rerun()
-with col_vac2:
-    st.caption("Vaciar elimina todos los embarques de la bandeja de esta sesión. "
-               "Los PDFs generados permanecen en la carpeta /data/salida/.")
+    if _cv2.button("Cancelar", key="conf_vaciar_no", use_container_width=True):
+        st.session_state.pop("_confirm_vaciar", None)
+        st.rerun()
