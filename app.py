@@ -141,7 +141,7 @@ def _resetear_flujo():
         "dest_tel", "dest_con", "dest_ref",
         "sel_dom_ent",
         "sel_flet", "flet_nom", "tipo_ent", "cond_flet", "con_rem",
-        "emp_rem", "num_rem", "est_rem", "notas_adic",
+        "emp_rem", "num_rem", "est_rem", "notas_adic", "ped_int",
     ]
     for k in keys:
         st.session_state.pop(k, None)
