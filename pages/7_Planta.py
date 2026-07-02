@@ -7,18 +7,16 @@ Permite:
   - Marcar como 'Embarcado sin guía' cuando el camión sale de planta
 """
 
-import base64
 import os
 import sys
 import streamlit as st
-import streamlit.components.v1 as components
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import APP_NAME, VERSION
 from modules.database import (
     init_database, get_embarques_filtrados,
-    actualizar_estado_embarque, regresar_embarque_a_bandeja, cancelar_embarque,
+    actualizar_estado_embarque, regresar_embarque_a_bandeja,
     marcar_impreso,
 )
 from modules.storage import descargar_pdf_bytes
@@ -42,7 +40,7 @@ render_sidebar(APP_NAME, VERSION)
 
 if st.session_state.get("_current_page") != "planta":
     for _k in list(st.session_state.keys()):
-        if _k.startswith(("_confirmar_emb_", "_confirmar_regreso_", "_confirmar_cancel_planta_")):
+        if _k.startswith(("_confirmar_emb_", "_confirmar_regreso_")):
             del st.session_state[_k]
 st.session_state["_current_page"] = "planta"
 
@@ -128,54 +126,26 @@ for emb in embarques:
                 st.caption(f"📝 {obs}")
 
         with col_acciones:
-            # ── Descargar / Imprimir PDF ──────────────────────────────────────
             ya_impreso = emb.get("impreso", False)
 
+            # ── Imprimir PDF ──────────────────────────────────────────────────
             if ruta_pdf:
                 try:
                     pdf_bytes = descargar_pdf_bytes(ruta_pdf)
-                    st.download_button(
-                        "⬇ Descargar PDF",
+                    _btn_label = "🔄 Reimprimir" if ya_impreso else "🖨️ Descargar para imprimir"
+                    if st.download_button(
+                        _btn_label,
                         data=pdf_bytes,
                         file_name=f"EMBARQUE_{folio}.pdf",
                         mime="application/pdf",
-                        key=f"dl_planta_{emb_id}",
+                        key=f"print_{emb_id}",
                         use_container_width=True,
-                    )
-                    # Abrir en nueva pestaña para imprimir — Blob URL (compatible con Edge)
-                    pdf_b64 = base64.b64encode(pdf_bytes).decode()
-                    _link_label = "🔄 Reimprimir" if ya_impreso else "🖨️ Abrir para imprimir"
-                    _link_color = "#2e7d32" if ya_impreso else "#333"
-                    components.html(
-                        f"""<style>
-                        a{{display:block;text-align:center;padding:5px;border:1px solid #ccc;
-                           border-radius:4px;margin-top:4px;text-decoration:none;
-                           color:{_link_color};font-weight:{"bold" if ya_impreso else "normal"};
-                           font-size:13px;font-family:sans-serif;background:white}}
-                        a:hover{{background:#f5f5f5}}
-                        </style>
-                        <a id="pl" href="#" target="_blank">{_link_label}</a>
-                        <script>(function(){{
-                            var b=atob("{pdf_b64}"),n=new Uint8Array(b.length);
-                            for(var i=0;i<b.length;i++)n[i]=b.charCodeAt(i);
-                            document.getElementById("pl").href=URL.createObjectURL(
-                                new Blob([n],{{type:"application/pdf"}}));
-                        }})();</script>""",
-                        height=40,
-                    )
-                    # Estado de impresión
-                    if ya_impreso:
-                        _ci, _cr = st.columns([3, 1])
-                        _ci.caption("✅ Ya impreso")
-                        if _cr.button("↩", key=f"reset_imp_{emb_id}",
-                                      help="Desmarcar como impreso"):
-                            marcar_impreso(emb_id, False)
-                            st.rerun()
-                    else:
-                        if st.button("✅ Marcar impreso", key=f"marcar_imp_{emb_id}",
-                                     use_container_width=True):
+                    ):
+                        if not ya_impreso:
                             marcar_impreso(emb_id, True)
-                            st.rerun()
+                        st.rerun()
+                    if ya_impreso:
+                        st.caption("✅ Ya impreso")
                 except Exception:
                     st.warning("PDF no disponible")
             else:
@@ -203,15 +173,6 @@ for emb in embarques:
                 help="El embarque no pudo salir. Lo regresa a la Bandeja de Finanzas para reprogramar.",
             ):
                 st.session_state[f"_confirmar_regreso_{emb_id}"] = True
-
-            # ── Cancelar embarque ─────────────────────────────────────────────
-            if st.button(
-                "❌ Cancelar embarque",
-                key=f"cancel_planta_{emb_id}",
-                use_container_width=True,
-                help="Cancela definitivamente este embarque.",
-            ):
-                st.session_state[f"_confirmar_cancel_planta_{emb_id}"] = True
 
         # ── Confirmaciones ────────────────────────────────────────────────────
         if st.session_state.get(f"_confirmar_emb_{emb_id}"):
@@ -253,25 +214,6 @@ for emb in embarques:
                 st.session_state.pop(f"_confirmar_regreso_{emb_id}", None)
                 st.rerun()
 
-        if st.session_state.get(f"_confirmar_cancel_planta_{emb_id}"):
-            st.error(
-                f"⚠️ ¿Cancelar definitivamente el embarque **{folio}**?\n\n"
-                "Esta acción no se puede deshacer. El embarque quedará como **Cancelado**."
-            )
-            bx1, bx2 = st.columns(2)
-            if bx1.button("❌ Sí, cancelar", key=f"conf_cx_si_{emb_id}",
-                          use_container_width=True):
-                try:
-                    cancelar_embarque(emb_id)
-                    st.session_state.pop(f"_confirmar_cancel_planta_{emb_id}", None)
-                    st.warning(f"❌ Embarque **{folio}** cancelado.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error: {e}")
-            if bx2.button("No, mantener", key=f"conf_cx_no_{emb_id}",
-                          use_container_width=True):
-                st.session_state.pop(f"_confirmar_cancel_planta_{emb_id}", None)
-                st.rerun()
 
 st.divider()
 st.info("📋 Una vez que el chofer entregue la guía de embarque, Finanzas o Ventas la registra en la sección **Guías**.")
