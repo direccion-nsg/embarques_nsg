@@ -233,17 +233,27 @@ section[data-testid="stSidebar"] label {
     color: #94A3B8 !important;
 }
 
-/* Botones en sidebar */
-section[data-testid="stSidebar"] .stButton > button {
-    background: rgba(255,255,255,0.06) !important;
+/* Botones en sidebar — fondo oscuro, texto claro en el elemento raíz Y en los hijos */
+section[data-testid="stSidebar"] button {
+    background: rgba(255,255,255,0.08) !important;
     color: #CBD5E1 !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    border-radius: 6px !important;
 }
-section[data-testid="stSidebar"] .stButton > button:hover {
-    background: rgba(192,57,43,0.28) !important;
-    color: #FFFFFF !important;
+section[data-testid="stSidebar"] button p,
+section[data-testid="stSidebar"] button span,
+section[data-testid="stSidebar"] button div {
+    color: #CBD5E1 !important;
+}
+section[data-testid="stSidebar"] button:hover {
+    background: rgba(192,57,43,0.30) !important;
     border-color: #C0392B !important;
+    color: #FFFFFF !important;
+}
+section[data-testid="stSidebar"] button:hover p,
+section[data-testid="stSidebar"] button:hover span,
+section[data-testid="stSidebar"] button:hover div {
+    color: #FFFFFF !important;
 }
 
 /* Indicadores de estado (override para sidebar oscuro) */
