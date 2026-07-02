@@ -697,6 +697,43 @@ def actualizar_estado_embarque(embarque_id: int, estado: str):
         _release(conn)
 
 
+def actualizar_embarque_logistica(embarque_id: int, datos: dict):
+    """Actualiza los datos logísticos de un embarque existente y limpia el motivo de regreso."""
+    conn = get_connection()
+    try:
+        _execute(conn, """
+            UPDATE embarques SET
+                remitente_nombre=%s, remitente_rfc=%s, remitente_tel=%s, remitente_direccion=%s,
+                destinatario_nombre=%s, destinatario_rfc=%s, destinatario_direccion=%s,
+                destinatario_cp=%s, destinatario_tel=%s, destinatario_contacto=%s,
+                destinatario_referencias=%s, fletera=%s, tipo_entrega=%s, condicion_flete=%s,
+                con_remision=%s, empresa_remision=%s, numero_remision=%s, estado_remision=%s,
+                observaciones=%s, pedido_interno=%s, ruta_pdf_generado=%s,
+                warning_confirmado=%s, detalle_warnings=%s, motivo_regreso=''
+            WHERE id=%s
+        """, (
+            datos.get("remitente_nombre",""),    datos.get("remitente_rfc",""),
+            datos.get("remitente_tel",""),       datos.get("remitente_direccion",""),
+            datos.get("destinatario_nombre",""), datos.get("destinatario_rfc",""),
+            datos.get("destinatario_direccion",""), datos.get("destinatario_cp",""),
+            datos.get("destinatario_tel",""),    datos.get("destinatario_contacto",""),
+            datos.get("destinatario_referencias",""), datos.get("fletera",""),
+            datos.get("tipo_entrega",""),        datos.get("condicion_flete",""),
+            1 if datos.get("con_remision") else 0,
+            datos.get("empresa_remision",""),    datos.get("numero_remision",""),
+            datos.get("estado_remision",""),     datos.get("observaciones",""),
+            datos.get("pedido_interno",""),      datos.get("ruta_pdf_generado",""),
+            1 if datos.get("warning_confirmado") else 0, datos.get("detalle_warnings",""),
+            embarque_id,
+        ))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        _release(conn)
+
+
 def marcar_impreso(embarque_id: int, impreso: bool):
     conn = get_connection()
     try:

@@ -23,7 +23,7 @@ from config import APP_NAME, VERSION, ensure_dirs
 from modules.database import (
     init_database,
     crear_salida, get_salida_por_folio, get_salida_por_id,
-    crear_embarque,
+    crear_embarque, actualizar_embarque_logistica, get_embarque_por_id,
     registrar_cambio,
     agregar_a_bandeja as db_agregar_bandeja,
     get_bandeja as db_get_bandeja,
@@ -166,6 +166,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if st.session_state.get("_editar_embarque_id"):
+    st.warning(
+        f"✏️ **Modo corrección** — Embarque en Bandeja\n\n"
+        f"Sube el mismo PDF Bind del folio **{st.session_state.get('_editar_folio', '—')}** "
+        "para regenerar el paquete con los datos corregidos. "
+        "Los datos logísticos se pre-cargarán automáticamente."
+    )
+
 if st.session_state["en_bandeja"]:
     st.success("✅ Embarque agregado a la bandeja. Puedes procesar otro o ir a la Bandeja para enviar.")
     col_sig1, col_sig2 = st.columns(2)
@@ -178,6 +186,41 @@ if st.session_state["en_bandeja"]:
     st.stop()
 
 st.divider()
+
+# ── Stepper ───────────────────────────────────────────────────────────────────
+_paso_act = 1
+if st.session_state.get("datos_bind"):
+    _paso_act = 2
+if st.session_state.get("datos_logisticos"):
+    _paso_act = 3
+if st.session_state.get("_bytes_paquete"):
+    _paso_act = 4
+
+_PASOS = ["1 Subir PDF", "2 Revisar datos", "3 Datos logísticos", "4 Generar"]
+_sc = st.columns(4)
+for _i, (_col, _lbl) in enumerate(zip(_sc, _PASOS), start=1):
+    if _i < _paso_act:
+        _col.markdown(
+            f"<div style='text-align:center;color:#22c55e;font-size:0.82rem'>✔ {_lbl}</div>",
+            unsafe_allow_html=True,
+        )
+    elif _i == _paso_act:
+        _col.markdown(
+            f"<div style='text-align:center;color:#E84040;font-weight:700;font-size:0.82rem'>▶ {_lbl}</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        _col.markdown(
+            f"<div style='text-align:center;color:#64748B;font-size:0.82rem'>{_lbl}</div>",
+            unsafe_allow_html=True,
+        )
+st.markdown(
+    f"<div style='height:3px;background:linear-gradient(90deg,"
+    f"#22c55e {(_paso_act-1)*25}%,#E84040 {(_paso_act-1)*25}% {(_paso_act)*25}%,"
+    f"#1e293b {(_paso_act)*25}%);"
+    f"border-radius:2px;margin:4px 0 12px'></div>",
+    unsafe_allow_html=True,
+)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PASO 1 — Subir PDF Bind
@@ -266,6 +309,56 @@ if archivos:
             )
         else:
             st.success(f"Extraído: **{datos.get('folio','—')}** | {datos.get('cliente','—')}")
+
+        # Modo corrección: pre-cargar datos logísticos desde el embarque original
+        _edit_emb_id = st.session_state.pop("_editar_embarque_id", None)
+        st.session_state.pop("_editar_folio", None)
+        if _edit_emb_id and not datos.get("error"):
+            _emb_orig = get_embarque_por_id(_edit_emb_id)
+            if _emb_orig:
+                st.session_state["embarque_id"] = _edit_emb_id
+                st.session_state["rem_nom"]         = _emb_orig.get("remitente_nombre", "")
+                st.session_state["rem_rfc"]         = _emb_orig.get("remitente_rfc", "")
+                st.session_state["rem_tel"]         = _emb_orig.get("remitente_tel", "")
+                st.session_state["rem_dir"]         = _emb_orig.get("remitente_direccion", "")
+                st.session_state["dest_nom"]        = _emb_orig.get("destinatario_nombre", "")
+                st.session_state["dest_rfc"]        = _emb_orig.get("destinatario_rfc", "")
+                st.session_state["dest_dir"]        = _emb_orig.get("destinatario_direccion", "")
+                st.session_state["dest_cp_manual"]  = _emb_orig.get("destinatario_cp", "")
+                st.session_state["dest_tel"]        = _emb_orig.get("destinatario_tel", "")
+                st.session_state["dest_con"]        = _emb_orig.get("destinatario_contacto", "")
+                st.session_state["dest_ref"]        = _emb_orig.get("destinatario_referencias", "")
+                st.session_state["flet_nom"]        = _emb_orig.get("fletera", "")
+                st.session_state["tipo_ent"]        = _emb_orig.get("tipo_entrega", "Ocurre")
+                st.session_state["cond_flet"]       = _emb_orig.get("condicion_flete", "Por cobrar")
+                st.session_state["con_rem"]         = bool(_emb_orig.get("con_remision"))
+                st.session_state["emp_rem"]         = _emb_orig.get("empresa_remision", "")
+                st.session_state["num_rem"]         = _emb_orig.get("numero_remision", "")
+                st.session_state["est_rem"]         = _emb_orig.get("estado_remision", "Digital adjunta")
+                st.session_state["ped_int"]         = _emb_orig.get("pedido_interno", "")
+                st.session_state["datos_logisticos"] = {
+                    "remitente_nombre":         _emb_orig.get("remitente_nombre", ""),
+                    "remitente_rfc":            _emb_orig.get("remitente_rfc", ""),
+                    "remitente_tel":            _emb_orig.get("remitente_tel", ""),
+                    "remitente_direccion":      _emb_orig.get("remitente_direccion", ""),
+                    "destinatario_nombre":      _emb_orig.get("destinatario_nombre", ""),
+                    "destinatario_rfc":         _emb_orig.get("destinatario_rfc", ""),
+                    "destinatario_direccion":   _emb_orig.get("destinatario_direccion", ""),
+                    "destinatario_cp":          _emb_orig.get("destinatario_cp", ""),
+                    "destinatario_tel":         _emb_orig.get("destinatario_tel", ""),
+                    "destinatario_contacto":    _emb_orig.get("destinatario_contacto", ""),
+                    "destinatario_referencias": _emb_orig.get("destinatario_referencias", ""),
+                    "fletera":                  _emb_orig.get("fletera", ""),
+                    "tipo_entrega":             _emb_orig.get("tipo_entrega", ""),
+                    "condicion_flete":          _emb_orig.get("condicion_flete", ""),
+                    "con_remision":             bool(_emb_orig.get("con_remision")),
+                    "empresa_remision":         _emb_orig.get("empresa_remision", ""),
+                    "numero_remision":          _emb_orig.get("numero_remision", ""),
+                    "estado_remision":          _emb_orig.get("estado_remision", ""),
+                    "observaciones":            _emb_orig.get("observaciones", ""),
+                    "pedido_interno":           _emb_orig.get("pedido_interno", ""),
+                }
+                st.info("✏️ Datos logísticos pre-cargados. Revisa el **Paso 3**, corrige lo necesario y regenera el paquete.")
 
 st.divider()
 
@@ -1162,19 +1255,25 @@ else:
                             "salida", salida_id, _c, v_orig, v_final, "MANUAL"
                         )
 
-                # ── 6. Crear embarque en DB (con todas las salidas) ───────────
-                embarque_id = crear_embarque(
-                    {
-                        **datos_log,
-                        "ruta_pdf_generado":     ruta_storage,
-                        "warning_confirmado":    bool(warnings_val),
-                        "detalle_warnings":      detalle_warnings_json(resultados_val),
-                        "correcciones_manuales": "",
-                    },
-                    all_salida_ids,
-                    partidas_cantidades,
-                )
-                st.session_state["embarque_id"] = embarque_id
+                # ── 6. Crear o actualizar embarque en DB ─────────────────────
+                _datos_emb = {
+                    **datos_log,
+                    "ruta_pdf_generado":     ruta_storage,
+                    "warning_confirmado":    bool(warnings_val),
+                    "detalle_warnings":      detalle_warnings_json(resultados_val),
+                    "correcciones_manuales": "",
+                }
+                _existing_emb_id = st.session_state.get("embarque_id")
+                if _existing_emb_id:
+                    actualizar_embarque_logistica(_existing_emb_id, _datos_emb)
+                    embarque_id = _existing_emb_id
+                else:
+                    embarque_id = crear_embarque(
+                        _datos_emb,
+                        all_salida_ids,
+                        partidas_cantidades,
+                    )
+                    st.session_state["embarque_id"] = embarque_id
 
                 st.success(f"✅ Paquete generado y guardado en Storage ({len(bytes_paq)//1024} KB)")
 

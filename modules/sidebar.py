@@ -65,17 +65,22 @@ def render_sidebar(app_name: str, version: str):
 
             st.divider()
             if n_sin_guia:
-                st.markdown(
-                    f"<p class='nsg-stat-warn'>⚠ {n_sin_guia} embarque(s) sin guía</p>",
-                    unsafe_allow_html=True,
-                )
+                if st.button(f"⚠ {n_sin_guia} sin guía",
+                             key="cnt_sin_guia", use_container_width=True,
+                             help=f"{n_sin_guia} embarque(s) embarcados sin guía registrada — clic para ir a Guías"):
+                    st.switch_page("pages/5_Guias.py")
             if n_parcial:
-                st.markdown(
-                    f"<p class='nsg-stat-err'>🔴 {n_parcial} salida(s) parciales</p>",
-                    unsafe_allow_html=True,
-                )
+                if st.button(f"🔴 {n_parcial} salidas parciales",
+                             key="cnt_parciales", use_container_width=True,
+                             help=f"{n_parcial} salida(s) con entregas incompletas — clic para filtrar en Historial"):
+                    st.session_state["_hist_prefiltro_estado"] = "Parcial"
+                    st.switch_page("pages/2_Historial.py")
             if n_pend:
-                st.caption(f"⬜ {n_pend} salida(s) pendientes")
+                if st.button(f"⬜ {n_pend} pendientes",
+                             key="cnt_pend", use_container_width=True,
+                             help=f"{n_pend} salida(s) sin embarques — clic para filtrar en Historial"):
+                    st.session_state["_hist_prefiltro_estado"] = "Pendiente"
+                    st.switch_page("pages/2_Historial.py")
             if not n_sin_guia and not n_parcial and not n_pend:
                 st.markdown(
                     "<p class='nsg-stat-ok'>✅ Todo al día</p>",
@@ -87,20 +92,21 @@ def render_sidebar(app_name: str, version: str):
         st.divider()
 
         # ── 4. Navegación (según rol) ─────────────────────────────────────────
-        if puede("nuevo"):
-            st.page_link("app.py",               label="Nuevo Embarque")
-        if puede("historial"):
-            st.page_link("pages/2_Historial.py", label="Historial")
-        if puede("catalogo"):
-            st.page_link("pages/3_Catalogos.py", label="Catálogos")
-        if puede("bandeja"):
-            st.page_link("pages/4_Bandeja.py",   label="Bandeja")
-        if puede("guias"):
-            st.page_link("pages/5_Guias.py",     label="Guías")
-        if puede("planta"):
-            st.page_link("pages/7_Planta.py",    label="Embarques Planta")
-        if puede("usuarios"):
-            st.page_link("pages/6_Usuarios.py",  label="Usuarios")
+        _cur = st.session_state.get("_current_page", "")
+
+        def _nav(path, label, page_key, perm_key):
+            if not puede(perm_key):
+                return
+            _lbl = f"● {label}" if _cur == page_key else label
+            st.page_link(path, label=_lbl)
+
+        _nav("app.py",               "Nuevo Embarque",   "nuevo_embarque", "nuevo")
+        _nav("pages/2_Historial.py", "Historial",        "historial",      "historial")
+        _nav("pages/3_Catalogos.py", "Catálogos",        "catalogo",       "catalogo")
+        _nav("pages/4_Bandeja.py",   "Bandeja",          "bandeja",        "bandeja")
+        _nav("pages/5_Guias.py",     "Guías",            "guias",          "guias")
+        _nav("pages/7_Planta.py",    "Embarques Planta", "planta",         "planta")
+        _nav("pages/6_Usuarios.py",  "Usuarios",         "usuarios",       "usuarios")
 
         st.divider()
 

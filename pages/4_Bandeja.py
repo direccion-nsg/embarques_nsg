@@ -233,6 +233,36 @@ for idx, item in enumerate(bandeja):
             if st.button("❌ Cancelar embarque", key=f"cancel_bnd_{idx}"):
                 st.session_state[f"_confirmar_cancel_bnd_{idx}"] = True
 
+        with btn_col4:
+            if st.button("✏️ Corregir datos", key=f"corr_{idx}",
+                         help="Regresa a Nuevo Embarque con los datos pre-cargados para corregirlos."):
+                _flujo_keys = [
+                    "datos_bind", "datos_bind_original",
+                    "salida_db", "salida_id", "embarque_id",
+                    "_bytes_pdf_original", "_bytes_pdf_remision",
+                    "_bytes_paquete", "_filename_paquete", "_ruta_storage_paquete",
+                    "_datos_adicionales",
+                    "en_bandeja", "datos_logisticos", "sugerencias_notas",
+                    "editor_partidas", "_partidas_df",
+                    "folio", "cliente", "rfc_cli", "fecha", "oc", "tel_cli",
+                    "dir_cli", "notas_bind",
+                    "sel_rem", "rem_nom", "rem_rfc", "rem_tel", "rem_dir",
+                    "sel_dest", "dest_nom", "dest_rfc", "dest_dir", "dest_cp_manual",
+                    "dest_tel", "dest_con", "dest_ref", "sel_dom_ent",
+                    "sel_flet", "flet_nom", "tipo_ent", "cond_flet", "con_rem",
+                    "emp_rem", "num_rem", "est_rem", "notas_adic", "ped_int",
+                ]
+                for _k in _flujo_keys:
+                    st.session_state.pop(_k, None)
+                for _k in [k for k in st.session_state
+                           if k.startswith("_partidas_df_adic_") or k.startswith("editor_partidas_adic_")]:
+                    st.session_state.pop(_k, None)
+                st.session_state["paso"] = 1
+                st.session_state["upload_key"] = st.session_state.get("upload_key", 0) + 1
+                st.session_state["_editar_embarque_id"] = item["embarque_id"]
+                st.session_state["_editar_folio"]       = item.get("folio_bind", "—")
+                st.switch_page("app.py")
+
         if st.session_state.get(f"_confirmar_cancel_bnd_{idx}"):
             st.error(
                 f"⚠️ ¿Cancelar definitivamente el embarque **{item.get('folio_bind','?')}**?\n\n"

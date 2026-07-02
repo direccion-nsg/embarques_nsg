@@ -231,4 +231,10 @@ for emb in embarques:
 
 
 st.divider()
-st.info("📋 Una vez que el chofer entregue la guía de embarque, Finanzas o Ventas la registra en la sección **Guías**.")
+with st.container(border=True):
+    st.markdown("#### ➡️ ¿Qué sigue después de despachar?")
+    st.markdown(
+        "Cuando el chofer entregue la **guía de embarque**, "
+        "Finanzas o Ventas la registra en el sistema para cerrar el ciclo:"
+    )
+    st.page_link("pages/5_Guias.py", label="📋 Ir a Guías — registrar guía de embarque →")

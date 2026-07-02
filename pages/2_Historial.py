@@ -155,6 +155,10 @@ def _df_partidas_embarque(partidas: list) -> pd.DataFrame:
 # Filtros
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Prefiltro desde sidebar (contadores operativos)
+if "_hist_prefiltro_estado" in st.session_state:
+    st.session_state["hist_estado"] = st.session_state.pop("_hist_prefiltro_estado")
+
 with st.expander("🔍 Filtros de búsqueda", expanded=True):
     f1, f2, f3 = st.columns([2, 2, 2])
     filtro_folio         = f1.text_input("Folio Bind",  placeholder="Ej. AFAD5267",
@@ -168,13 +172,16 @@ with st.expander("🔍 Filtros de búsqueda", expanded=True):
     filtro_estado  = f4.selectbox(
         "Estado salida",
         ["Todos", "Pendiente", "Parcial", "Completada"],
+        key="hist_estado",
         help="Pendiente: ninguna partida embarcada. Parcial: algunas partidas embarcadas. Completada: todas las partidas cubiertas.",
     )
     filtro_desde   = f5.date_input(
         "Fecha desde", value=date.today() - timedelta(days=90),
+        key="hist_desde",
         help="Filtra salidas con fecha de emisión igual o posterior a esta fecha. Por defecto: últimos 90 días.",
     )
     filtro_hasta   = f6.date_input("Fecha hasta", value=None,
+        key="hist_hasta",
         help="Filtra salidas con fecha de emisión igual o anterior a esta fecha.")
     buscar = st.button("🔍 Buscar", type="primary")
 
@@ -199,10 +206,25 @@ salidas = _salidas_cached(
 # ──────────────────────────────────────────────────────────────────────────────
 
 if not salidas:
-    _hint = ""
-    if filtro_desde and (date.today() - filtro_desde).days < 91:
-        _hint = " Prueba a ampliar el rango de fechas — el filtro inicial muestra solo los últimos 90 días."
-    st.info(f"No se encontraron salidas con esos criterios.{_hint}")
+    _fecha_restrictiva = filtro_desde and (date.today() - filtro_desde).days < 365
+    _filtros_activos   = any([filtro_folio, filtro_cliente, filtro_pedido_interno,
+                               filtro_estado not in ("", "Todos"), filtro_hasta])
+    st.warning("No se encontraron salidas con los criterios actuales.")
+    if _fecha_restrictiva or _filtros_activos:
+        _hint_partes = []
+        if _fecha_restrictiva:
+            _hint_partes.append(f"el rango de fechas cubre solo desde **{filtro_desde.strftime('%d/%m/%Y')}**")
+        if filtro_estado not in ("", "Todos"):
+            _hint_partes.append(f"el estado está filtrado a **{filtro_estado}**")
+        if filtro_folio or filtro_cliente or filtro_pedido_interno:
+            _hint_partes.append("hay filtros de texto activos")
+        st.caption("Posible causa: " + " · ".join(_hint_partes) + ".")
+        if st.button("↩ Ampliar búsqueda — quitar fechas y estado", key="btn_ampliar_hist"):
+            st.session_state["hist_desde"] = date(2020, 1, 1)
+            st.session_state["hist_hasta"] = None
+            st.session_state["hist_estado"] = "Todos"
+            _salidas_cached.clear()
+            st.rerun()
     st.stop()
 
 st.markdown(f"**{len(salidas)} salida(s) encontrada(s)**")
