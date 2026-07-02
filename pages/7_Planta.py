@@ -73,6 +73,18 @@ if not embarques:
     st.stop()
 
 st.markdown(f"**{len(embarques)} embarque(s) pendiente(s) de despacho:**")
+
+with st.container(border=True):
+    st.markdown("**¿Qué hago aquí?**")
+    st.markdown(
+        "**1.** Descarga e imprime el PDF de cada embarque  \n"
+        "*(Solo la hoja logística — entrega la hoja de salida Bind únicamente si la fletera la solicita)*\n\n"
+        "**2.** Almacén prepara la mercancía según la hoja logística\n\n"
+        "**3.** Cuando la camioneta salga de planta, haz clic en **🚛 Marcar como Embarcado** "
+        "en los embarques que salieron  \n"
+        "*(Si un embarque **no salió**, no lo marques — quedará pendiente para el siguiente despacho)*"
+    )
+
 st.divider()
 
 # ──────────────────────────────────────────────────────────────────────────────

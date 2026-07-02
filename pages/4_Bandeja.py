@@ -3,11 +3,7 @@ Bandeja de Embarques — gestión de múltiples embarques en sesión.
 
 Desde aquí el usuario puede:
   - Ver todos los embarques preparados en la sesión actual
-  - Seleccionar uno o varios
-  - Generar PDF combinado de los seleccionados
-  - Abrir carpeta con todos los archivos
-  - Preparar correo (abre Outlook + carpeta para adjuntar manualmente)
-  - Copiar mensaje para Teams
+  - Seleccionar uno o varios y enviarlos a Planta (notificación automática a almacén)
   - Quitar embarques seleccionados o vaciar la bandeja
 """
 
@@ -28,13 +24,8 @@ from modules.database import (
 )
 from modules.sidebar import render_sidebar
 from modules.auth import require_auth
-from modules.pdf_merger import combinar_multiples_embarques
-from modules.storage import subir_pdf_combinado, generar_url_firmada
-from modules.messaging import (
-    construir_mensaje_teams_multiple,
-    abrir_mailto_multiple,
-    enviar_email_planta,
-)
+from modules.storage import descargar_pdf_bytes
+from modules.messaging import enviar_email_planta
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Configuración
@@ -55,7 +46,6 @@ if st.session_state.get("_current_page") != "bandeja":
     for _k in list(st.session_state.keys()):
         if _k.startswith("_confirmar_cancel_bnd_"):
             del st.session_state[_k]
-    st.session_state.pop("mostrar_teams_msg", None)
     st.session_state.pop("_confirm_vaciar", None)
 st.session_state["_current_page"] = "bandeja"
 
@@ -150,102 +140,28 @@ with col_todo:
         st.session_state["_select_all_pending"] = True
         st.rerun()
 
-st.markdown("#### Acciones sobre los seleccionados")
+st.markdown("#### Enviar a Planta")
 
-items_target = items_sel if items_sel else bandeja  # si nada seleccionado, aplica a todos
-
-ac1, ac2, ac3, ac4 = st.columns(4)
-
-# ── PDF Combinado ──────────────────────────────────────────────────────────────
-with ac1:
-    if st.button("📄 Generar PDF combinado",
-                 disabled=(n_sel == 0),
-                 help="Une los paquetes de los embarques seleccionados en un solo PDF.",
-                 key="btn_pdf_multi"):
-        with st.spinner("Combinando PDFs..."):
-            try:
-                bytes_multi = combinar_multiples_embarques(items_sel)
-                st.session_state["bytes_pdf_multi"] = bytes_multi
-                st.success(f"✅ PDF combinado ({len(bytes_multi)//1024} KB)")
-            except Exception as ex:
-                st.error(f"Error: {ex}")
-
-# ── Correo ────────────────────────────────────────────────────────────────────
-with ac2:
-    if st.button("✉ Preparar correo",
-                 disabled=(n_sel == 0),
-                 help="Combina los PDFs, sube a Storage y abre Outlook con link de descarga.",
-                 key="btn_mail_multi"):
-        with st.spinner("Preparando PDF y generando link..."):
-            try:
-                from datetime import datetime as _dt
-                bytes_correo = st.session_state.get("bytes_pdf_multi") or combinar_multiples_embarques(items_sel)
-                fname_correo = f"BANDEJA_{_dt.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-                ruta_correo  = subir_pdf_combinado(bytes_correo, fname_correo)
-                url_correo   = generar_url_firmada(ruta_correo)
-                st.session_state["bytes_pdf_multi"]    = bytes_correo
-                st.session_state["url_pdf_multi"]      = url_correo
-                abrir_mailto_multiple(items_sel, url_correo)
-                st.success("✉ Outlook abierto — el link del PDF está en el cuerpo del correo.")
-            except Exception as ex:
-                st.error(f"Error: {ex}")
-
-# ── Enviar a Planta ───────────────────────────────────────────────────────────
-with ac3:
-    if st.button("🏭 Enviar a Planta",
-                 disabled=(n_sel == 0),
-                 type="primary",
-                 help="Marca los embarques seleccionados como 'Enviado a Planta' para que Administración los vea.",
-                 key="btn_enviar_planta"):
-        enviados = 0
-        for item in items_sel:
-            try:
-                actualizar_estado_embarque(item["embarque_id"], "Enviado a Planta")
-                enviados += 1
-            except Exception as ex:
-                st.error(f"Error en {item.get('folio_bind','?')}: {ex}")
-        if enviados:
-            url_notif    = st.session_state.get("url_pdf_multi", "")
-            nombre_user  = st.session_state.get("_auth_user", {}).get("nombre", "")
-            ok_mail, err = enviar_email_planta(items_sel, url_notif, nombre_user)
-            st.session_state["_flash_planta"] = {"n": enviados, "ok_mail": ok_mail, "err": err}
-            st.session_state["bandeja"] = db_get_bandeja()
-            st.rerun()
-        else:
-            st.error("No se pudo actualizar el estado.")
-
-# ── Mensaje Teams ─────────────────────────────────────────────────────────────
-with ac4:
-    if st.button("📋 Copiar mensaje Teams",
-                 disabled=(n_sel == 0),
-                 key="btn_teams_multi"):
-        st.session_state["mostrar_teams_msg"] = True
-
-if st.session_state.get("mostrar_teams_msg") and items_sel:
-    url_teams = st.session_state.get("url_pdf_multi", "")
-    if not url_teams:
-        st.info("Primero usa '✉ Preparar correo' para generar el link del PDF.")
-        url_teams = ""
-    msg = construir_mensaje_teams_multiple(items_sel, url_teams)
-    st.text_area("Mensaje para Teams (selecciona y copia con Ctrl+A, Ctrl+C):",
-                 value=msg, height=160, key="teams_multi_txt")
-    if st.button("Ocultar", key="btn_hide_teams"):
-        st.session_state["mostrar_teams_msg"] = False
+if st.button("🏭 Enviar a Planta",
+             disabled=(n_sel == 0),
+             type="primary",
+             help="Marca los embarques seleccionados como 'Enviado a Planta' y envía notificación automática a almacén.",
+             key="btn_enviar_planta"):
+    enviados = 0
+    for item in items_sel:
+        try:
+            actualizar_estado_embarque(item["embarque_id"], "Enviado a Planta")
+            enviados += 1
+        except Exception as ex:
+            st.error(f"Error en {item.get('folio_bind','?')}: {ex}")
+    if enviados:
+        nombre_user  = st.session_state.get("_auth_user", {}).get("nombre", "")
+        ok_mail, err = enviar_email_planta(items_sel, "", nombre_user)
+        st.session_state["_flash_planta"] = {"n": enviados, "ok_mail": ok_mail, "err": err}
+        st.session_state["bandeja"] = db_get_bandeja()
         st.rerun()
-
-# ── Descarga del PDF combinado si ya se generó ────────────────────────────────
-bytes_multi = st.session_state.get("bytes_pdf_multi")
-if bytes_multi:
-    from datetime import datetime as _dt
-    fname_multi = f"BANDEJA_{_dt.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    st.markdown("---")
-    st.download_button(
-        "⬇ Descargar PDF combinado",
-        data=bytes_multi,
-        file_name=fname_multi,
-        mime="application/pdf",
-        key="btn_dl_multi",
-    )
+    else:
+        st.error("No se pudo actualizar el estado.")
 
 st.divider()
 
