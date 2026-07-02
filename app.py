@@ -187,41 +187,6 @@ if st.session_state["en_bandeja"]:
 
 st.divider()
 
-# ── Stepper ───────────────────────────────────────────────────────────────────
-_paso_act = 1
-if st.session_state.get("datos_bind"):
-    _paso_act = 2
-if st.session_state.get("datos_logisticos"):
-    _paso_act = 3
-if st.session_state.get("_bytes_paquete"):
-    _paso_act = 4
-
-_PASOS = ["1 Subir PDF", "2 Revisar datos", "3 Datos logísticos", "4 Generar"]
-_sc = st.columns(4)
-for _i, (_col, _lbl) in enumerate(zip(_sc, _PASOS), start=1):
-    if _i < _paso_act:
-        _col.markdown(
-            f"<div style='text-align:center;color:#22c55e;font-size:0.82rem'>✔ {_lbl}</div>",
-            unsafe_allow_html=True,
-        )
-    elif _i == _paso_act:
-        _col.markdown(
-            f"<div style='text-align:center;color:#E84040;font-weight:700;font-size:0.82rem'>▶ {_lbl}</div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        _col.markdown(
-            f"<div style='text-align:center;color:#64748B;font-size:0.82rem'>{_lbl}</div>",
-            unsafe_allow_html=True,
-        )
-st.markdown(
-    f"<div style='height:3px;background:linear-gradient(90deg,"
-    f"#22c55e {(_paso_act-1)*25}%,#E84040 {(_paso_act-1)*25}% {(_paso_act)*25}%,"
-    f"#1e293b {(_paso_act)*25}%);"
-    f"border-radius:2px;margin:4px 0 12px'></div>",
-    unsafe_allow_html=True,
-)
-
 # ──────────────────────────────────────────────────────────────────────────────
 # PASO 1 — Subir PDF Bind
 # ──────────────────────────────────────────────────────────────────────────────

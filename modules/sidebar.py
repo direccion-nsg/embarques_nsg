@@ -48,7 +48,45 @@ def render_sidebar(app_name: str, version: str):
         st.caption(f"v{version}")
         st.divider()
 
-        # ── 2. Bandeja ────────────────────────────────────────────────────────
+        # ── 2. Stepper (solo en Nuevo Embarque) ──────────────────────────────
+        if st.session_state.get("_current_page") == "nuevo_embarque":
+            _sp = 1
+            if st.session_state.get("datos_bind"):
+                _sp = 2
+            if st.session_state.get("datos_logisticos"):
+                _sp = 3
+            if st.session_state.get("_bytes_paquete"):
+                _sp = 4
+            _pasos_lbl = ["Subir PDF", "Revisar datos", "Datos logísticos", "Generar"]
+            _lineas = []
+            for _pi, _pl in enumerate(_pasos_lbl, start=1):
+                if _pi < _sp:
+                    _lineas.append(
+                        f"<div style='font-size:0.78rem;color:#4ADE80;padding:2px 0'>"
+                        f"✔ {_pi} {_pl}</div>"
+                    )
+                elif _pi == _sp:
+                    _lineas.append(
+                        f"<div style='font-size:0.78rem;color:#F87171;font-weight:700;"
+                        f"padding:2px 0'>▶ {_pi} {_pl}</div>"
+                    )
+                else:
+                    _lineas.append(
+                        f"<div style='font-size:0.78rem;color:#475569;padding:2px 0'>"
+                        f"&nbsp;&nbsp;{_pi} {_pl}</div>"
+                    )
+            st.markdown(
+                "<div style='margin-bottom:4px;font-size:0.7rem;color:#64748B;"
+                "letter-spacing:0.5px;text-transform:uppercase'>Progreso</div>"
+                + "".join(_lineas)
+                + f"<div style='height:2px;background:linear-gradient(90deg,"
+                f"#4ADE80 {(_sp-1)*25}%,#F87171 {(_sp-1)*25}% {_sp*25}%,"
+                f"#334155 {_sp*25}%);border-radius:2px;margin-top:6px'></div>",
+                unsafe_allow_html=True,
+            )
+            st.divider()
+
+        # ── 3. Bandeja ────────────────────────────────────────────────────────
         n_bandeja = len(st.session_state["bandeja"])
         if n_bandeja > 0:
             st.metric("📦 Bandeja", f"{n_bandeja} embarque{'s' if n_bandeja > 1 else ''}")
