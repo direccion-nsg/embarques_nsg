@@ -48,8 +48,6 @@ st.set_page_config(
 ensure_dirs()
 init_database()
 require_auth("historial")
-render_sidebar(APP_NAME, VERSION)
-
 if st.session_state.get("_current_page") != "historial":
     for _k in list(st.session_state.keys()):
         if _k.startswith(("_hist_open_", "_ev_bytes_", "_conf_cancel_hist_")):
@@ -57,6 +55,7 @@ if st.session_state.get("_current_page") != "historial":
     for _k in ("_rep_excel", "_rep_csv", "_rep_filas"):
         st.session_state.pop(_k, None)
 st.session_state["_current_page"] = "historial"
+render_sidebar(APP_NAME, VERSION)
 
 st.markdown("""
 <style>

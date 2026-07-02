@@ -37,13 +37,12 @@ st.set_page_config(
 
 init_database()
 require_auth("planta")
-render_sidebar(APP_NAME, VERSION)
-
 if st.session_state.get("_current_page") != "planta":
     for _k in list(st.session_state.keys()):
         if _k.startswith(("_confirmar_emb_", "_confirmar_regreso_", "_motivo_regreso_")):
             del st.session_state[_k]
 st.session_state["_current_page"] = "planta"
+render_sidebar(APP_NAME, VERSION)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Encabezado

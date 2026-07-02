@@ -42,12 +42,11 @@ st.set_page_config(
 
 init_database()
 user_actual = require_auth("usuarios")
-render_sidebar(APP_NAME, VERSION)
-
 if st.session_state.get("_current_page") != "usuarios":
     for _k in ("_reset_uid", "_reset_email", "_del_uid", "_del_email"):
         st.session_state.pop(_k, None)
 st.session_state["_current_page"] = "usuarios"
+render_sidebar(APP_NAME, VERSION)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Encabezado

@@ -40,14 +40,13 @@ st.set_page_config(
 ensure_dirs()
 init_database()
 require_auth("bandeja")
-render_sidebar(APP_NAME, VERSION)
-
 if st.session_state.get("_current_page") != "bandeja":
     for _k in list(st.session_state.keys()):
         if _k.startswith("_confirmar_cancel_bnd_"):
             del st.session_state[_k]
     st.session_state.pop("_confirm_vaciar", None)
 st.session_state["_current_page"] = "bandeja"
+render_sidebar(APP_NAME, VERSION)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Encabezado

@@ -157,8 +157,8 @@ def _resetear_flujo():
 # Sidebar y encabezado
 # ──────────────────────────────────────────────────────────────────────────────
 
-render_sidebar(APP_NAME, VERSION)
 st.session_state["_current_page"] = "nuevo_embarque"
+render_sidebar(APP_NAME, VERSION)
 
 st.markdown(f'<p class="titulo-nsg">📦 {APP_NAME}</p>', unsafe_allow_html=True)
 st.markdown(

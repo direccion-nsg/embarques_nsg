@@ -21,13 +21,12 @@ st.set_page_config(page_title=f"Catálogos — {APP_NAME}", page_icon="📚", la
 ensure_dirs()
 init_database()
 require_auth("catalogo")
-render_sidebar(APP_NAME, VERSION)
-
 if st.session_state.get("_current_page") != "catalogos":
     for _k in list(st.session_state.keys()):
         if _k.startswith("_confirm_del_"):
             del st.session_state[_k]
 st.session_state["_current_page"] = "catalogos"
+render_sidebar(APP_NAME, VERSION)
 
 if "_cat_msg" in st.session_state:
     st.success(st.session_state.pop("_cat_msg"))
