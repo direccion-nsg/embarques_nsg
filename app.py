@@ -517,373 +517,377 @@ st.divider()
 # PASO 3 — Datos logísticos
 # ──────────────────────────────────────────────────────────────────────────────
 
-with st.expander(
-    "3 — Capturar datos logísticos",
-    expanded=(bool(st.session_state.get("datos_logisticos")) and bool(datos_bind)),
-):
-    if not datos_bind:
-        st.info("Completa el Paso 1 primero.")
-    else:
-        # ── Inicializar campos en primer render (desde datos_bind) ────────────
-        if "rem_nom" not in st.session_state:
-            st.session_state["rem_nom"] = datos_bind.get("remitente_nombre", "")
-            st.session_state["rem_rfc"] = datos_bind.get("remitente_rfc", "")
-            st.session_state["rem_tel"] = datos_bind.get("remitente_tel", "")
-            st.session_state["rem_dir"] = datos_bind.get("remitente_direccion", "")
-        if "dest_nom" not in st.session_state:
-            st.session_state["dest_nom"] = datos_bind.get("cliente", "")
-            st.session_state["dest_rfc"] = datos_bind.get("rfc_cliente", "")
-            st.session_state["dest_dir"] = datos_bind.get("direccion_cliente", "")
-            st.session_state["dest_tel"] = datos_bind.get("tel_cliente", "")
-            st.session_state["dest_con"] = ""
-            st.session_state["dest_ref"] = ""
-        if "flet_nom" not in st.session_state:
-            _flet_pre = st.session_state.get("sel_flet", "— Manual —")
-            st.session_state["flet_nom"] = "" if _flet_pre == "— Manual —" else _flet_pre
-
-        def _on_rem_change():
-            sel = st.session_state["sel_rem"]
-            if sel == "— Manual —":
-                st.session_state["rem_nom"] = ""
-                st.session_state["rem_rfc"] = ""
-                st.session_state["rem_tel"] = ""
-                st.session_state["rem_dir"] = ""
-                return
-            cat = get_remitente_por_nombre(sel)
-            st.session_state["rem_nom"] = cat.get("nombre", "")
-            st.session_state["rem_rfc"] = cat.get("rfc", "")
-            st.session_state["rem_tel"] = cat.get("telefono", "")
-            st.session_state["rem_dir"] = cat.get("direccion", "")
-
-        def _on_dest_change():
-            sel = st.session_state["sel_dest"]
-            if sel == "— Manual —":
-                st.session_state["dest_nom"] = ""
-                st.session_state["dest_rfc"] = ""
-                st.session_state["dest_dir"] = ""
-                st.session_state["dest_tel"] = ""
+@st.fragment
+def _paso3(datos_bind):
+    with st.expander(
+        "3 — Capturar datos logísticos",
+        expanded=(bool(st.session_state.get("datos_logisticos")) and bool(datos_bind)),
+    ):
+        if not datos_bind:
+            st.info("Completa el Paso 1 primero.")
+        else:
+            # ── Inicializar campos en primer render (desde datos_bind) ────────────
+            if "rem_nom" not in st.session_state:
+                st.session_state["rem_nom"] = datos_bind.get("remitente_nombre", "")
+                st.session_state["rem_rfc"] = datos_bind.get("remitente_rfc", "")
+                st.session_state["rem_tel"] = datos_bind.get("remitente_tel", "")
+                st.session_state["rem_dir"] = datos_bind.get("remitente_direccion", "")
+            if "dest_nom" not in st.session_state:
+                st.session_state["dest_nom"] = datos_bind.get("cliente", "")
+                st.session_state["dest_rfc"] = datos_bind.get("rfc_cliente", "")
+                st.session_state["dest_dir"] = datos_bind.get("direccion_cliente", "")
+                st.session_state["dest_tel"] = datos_bind.get("tel_cliente", "")
                 st.session_state["dest_con"] = ""
                 st.session_state["dest_ref"] = ""
-                return
-            cat = get_destinatario_por_nombre(sel)
-            st.session_state["dest_nom"] = cat.get("nombre", "")
-            st.session_state["dest_rfc"] = cat.get("rfc", "")
-            st.session_state["dest_dir"] = cat.get("direccion", "")
-            st.session_state["dest_tel"] = cat.get("telefono", "")
-            st.session_state["dest_con"] = cat.get("contacto", "")
-            st.session_state["dest_ref"] = cat.get("referencias", "")
-
-        def _on_flet_change():
-            sel = st.session_state["sel_flet"]
-            st.session_state["flet_nom"] = "" if sel == "— Manual —" else sel
-
-        def _on_tipo_ent_change():
-            # Al cambiar tipo, limpiar selección de domicilio de entrega
-            st.session_state.pop("sel_dom_ent", None)
-
-        def _on_dom_ent_change():
-            sel = st.session_state.get("sel_dom_ent", "— Seleccionar —")
-            if sel and sel != "— Seleccionar —":
-                dom = get_domicilio_por_nombre(sel)
-                st.session_state["dest_nom"] = dom.get("nombre", "")
-                st.session_state["dest_dir"] = dom.get("direccion", "")
-                st.session_state["dest_cp_manual"] = dom.get("cp", "")
-                st.session_state["dest_tel"] = dom.get("telefono", "")
-                st.session_state["dest_con"] = dom.get("contacto", "")
-                st.session_state["dest_ref"] = dom.get("referencias", "")
-            else:
-                st.session_state["dest_nom"] = ""
-                st.session_state["dest_dir"] = ""
-                st.session_state["dest_cp_manual"] = ""
-                st.session_state["dest_tel"] = ""
-                st.session_state["dest_con"] = ""
-                st.session_state["dest_ref"] = ""
-
-        # ── Remitente ─────────────────────────────────────────────────────────
-        st.markdown('<div class="seccion"><b>Remitente (origen)</b></div>',
-                    unsafe_allow_html=True)
-        rem_sel = st.selectbox(
-            "Del catálogo", ["— Manual —"] + nombres_remitentes(), key="sel_rem",
-            on_change=_on_rem_change,
-            help="Selecciona NSG u otro remitente del catálogo. Con «Manual» capturas uno nuevo.",
-        )
-        cr1, cr2 = st.columns(2)
-        with cr1:
-            rem_nombre = st.text_input(
-                "Nombre *",
-                key="rem_nom",
-                help="Nombre completo del remitente (origen del embarque).",
-            )
-            rem_rfc = st.text_input(
-                "RFC",
-                key="rem_rfc",
-                help="RFC del remitente para la hoja logística.",
-            )
-        with cr2:
-            rem_tel = st.text_input(
-                "Teléfono",
-                key="rem_tel",
-                help="Teléfono de contacto del remitente.",
-            )
-            rem_dir = st.text_input(
-                "Dirección",
-                key="rem_dir",
-                help="Dirección de origen del embarque.",
-            )
-
-        # ── Destinatario ──────────────────────────────────────────────────────
-        st.markdown('<div class="seccion"><b>Destinatario (destino)</b></div>',
-                    unsafe_allow_html=True)
-        if st.session_state.get("tipo_ent") == "Domicilio del cliente":
-            _domicilios_cat = nombres_domicilios_entrega()
-            if _domicilios_cat:
-                st.selectbox(
-                    "🚗 Domicilio de entrega (vehículo propio NSG)",
-                    ["— Seleccionar —"] + _domicilios_cat,
-                    key="sel_dom_ent",
-                    on_change=_on_dom_ent_change,
-                    help="Selecciona el punto de entrega. Los campos se llenarán automáticamente y puedes editarlos.",
-                )
-            else:
-                st.info(
-                    "No hay domicilios de entrega registrados. "
-                    "Agrégalos en **Catálogos → Domicilios de entrega** y luego vuelve aquí."
-                )
-        dest_sel = st.selectbox(
-            "Del catálogo", ["— Manual —"] + nombres_destinatarios(), key="sel_dest",
-            on_change=_on_dest_change,
-            help="Selecciona un destinatario guardado. Con «Manual» capturas uno nuevo y puedes guardarlo al catálogo.",
-        )
-        cd1, cd2 = st.columns(2)
-        with cd1:
-            dest_nombre = st.text_input(
-                "Nombre *",
-                key="dest_nom",
-                help="Nombre del consignatario al que se entrega el embarque.",
-            )
-            dest_rfc = st.text_input(
-                "RFC",
-                key="dest_rfc",
-                help="RFC del destinatario para documentación.",
-            )
-            dest_dir = st.text_input(
-                "Dirección",
-                key="dest_dir",
-                help="Dirección completa de entrega. Incluye el CP en formato «C.P. 12345» para detección automática.",
-            )
-            # CP: auto-detectado de la dirección o captura manual
-            _cp_auto = extraer_cp(dest_dir)
-            if _cp_auto:
-                st.caption(f"CP detectado automáticamente: **{_cp_auto}**")
-                dest_cp = _cp_auto
-            else:
-                dest_cp = st.text_input(
-                    "CP (no detectado — capturar manualmente)",
-                    key="dest_cp_manual",
-                    help="Código postal de 5 dígitos. Se imprime en la hoja logística y lo usa la fletera para la guía.",
-                )
-        with cd2:
-            dest_tel = st.text_input(
-                "Teléfono",
-                key="dest_tel",
-                help="Teléfono del destinatario. Obligatorio para entregas a domicilio.",
-            )
-            dest_contacto = st.text_input(
-                "Contacto",
-                key="dest_con",
-                help="Nombre de la persona que recibe en el destino.",
-            )
-            dest_refs = st.text_input(
-                "Referencias",
-                key="dest_ref",
-                help="Referencias de ubicación para la fletera: color de fachada, entre qué calles, etc.",
-            )
-
-        if dest_sel == "— Manual —" and dest_nombre and \
-                dest_nombre not in nombres_destinatarios():
-            if st.button("💾 Guardar destinatario en catálogo", key="btn_guardar_dest"):
-                guardar_destinatario({
-                    "nombre":      dest_nombre,
-                    "rfc":         dest_rfc,
-                    "direccion":   dest_dir,
-                    "telefono":    dest_tel,
-                    "contacto":    dest_contacto,
-                    "referencias": dest_refs,
-                })
-                st.rerun()
-
-        # Botón para guardar domicilio de entrega desde el formulario
-        if (st.session_state.get("tipo_ent") == "Domicilio del cliente"
-                and st.session_state.get("sel_dom_ent", "— Seleccionar —") == "— Seleccionar —"
-                and dest_nombre
-                and dest_nombre not in nombres_domicilios_entrega()):
-            if st.button("💾 Guardar domicilio en catálogo", key="btn_guardar_dom_ent"):
-                guardar_domicilio_entrega({
-                    "nombre":      dest_nombre,
-                    "direccion":   dest_dir,
-                    "cp":          dest_cp if dest_cp else st.session_state.get("dest_cp_manual", ""),
-                    "telefono":    dest_tel,
-                    "contacto":    dest_contacto,
-                    "referencias": dest_refs,
-                })
-                st.rerun()
-
-        # ── Fletera y condiciones ──────────────────────────────────────────────
-        st.markdown('<div class="seccion"><b>Fletera y condiciones</b></div>',
-                    unsafe_allow_html=True)
-
-        # Leer tipo_ent del estado anterior para condicionar cf1 (se renderiza antes de cf2)
-        _es_domicilio_propio = st.session_state.get("tipo_ent", "Ocurre") == "Domicilio del cliente"
-
-        cf1, cf2, cf3 = st.columns(3)
-        with cf1:
-            if _es_domicilio_propio:
-                st.info("🚗 Entrega con vehículo propio NSG — sin fletera externa.")
-                fletera  = "Vehículo propio NSG"
-                flet_sel = "— Manual —"
-            else:
-                flet_sel = st.selectbox(
-                    "Fletera *", ["— Manual —"] + nombres_fleteras(), key="sel_flet",
-                    on_change=_on_flet_change,
-                    help="Empresa transportista. El sistema compara con las notas del Bind y avisa si hay diferencia.",
-                )
-                fletera = st.text_input(
-                    "Nombre fletera",
-                    key="flet_nom",
-                    help="Nombre exacto de la fletera tal como aparece en sus guías.",
-                )
-                if flet_sel == "— Manual —" and fletera and \
-                        fletera not in nombres_fleteras():
-                    if st.button("💾 Guardar fletera", key="btn_guardar_fletera"):
-                        guardar_fletera({"nombre": fletera})
-                        st.rerun()
-        with cf2:
-            tipo_entrega = st.selectbox(
-                "Tipo de entrega *",
-                ["Ocurre", "Domicilio", "Domicilio del cliente"],
-                key="tipo_ent",
-                on_change=_on_tipo_ent_change,
-                help=(
-                    "Ocurre: el cliente recoge en la agencia de la fletera. "
-                    "Domicilio: la fletera entrega en el domicilio del cliente. "
-                    "Domicilio del cliente: NSG entrega directamente con vehículo propio."
-                ),
-            )
-            if _es_domicilio_propio:
-                condicion_flete = "Entrega directa"
-                st.caption("Sin cargo de flete — entrega directa con vehículo NSG.")
-            else:
-                condicion_flete = st.selectbox(
-                    "Condición del flete *", ["Por cobrar", "Pagado"], key="cond_flet",
-                    help="Por cobrar: el destinatario paga el flete al recibirlo. Pagado: NSG cubre el costo del flete.",
-                )
-        with cf3:
-            con_remision = st.checkbox("Con remisión del cliente", key="con_rem",
-                help="Activa si el cliente envía una remisión que debe acompañar al embarque (física o digital).")
-
-        # ── Pedido interno de Planta ───────────────────────────────────────────
-        pi1, _ = st.columns([1, 2])
-        with pi1:
-            pedido_interno = st.text_input(
-                "Pedido interno de Planta (opcional)",
-                placeholder="Ej. P001  ó  P001, P002",
-                key="ped_int",
-                help="Número(s) de pedido internos de Planta. Si son varios, sepáralos con coma. Se puede buscar por número individual en el Historial.",
-            )
-
-        # ── Sección remisión ───────────────────────────────────────────────────
-        empresa_remision = ""
-        numero_remision  = ""
-
-        if con_remision:
-            st.markdown('<div class="seccion"><b>📄 Remisión del cliente</b></div>',
+            if "flet_nom" not in st.session_state:
+                _flet_pre = st.session_state.get("sel_flet", "— Manual —")
+                st.session_state["flet_nom"] = "" if _flet_pre == "— Manual —" else _flet_pre
+    
+            def _on_rem_change():
+                sel = st.session_state["sel_rem"]
+                if sel == "— Manual —":
+                    st.session_state["rem_nom"] = ""
+                    st.session_state["rem_rfc"] = ""
+                    st.session_state["rem_tel"] = ""
+                    st.session_state["rem_dir"] = ""
+                    return
+                cat = get_remitente_por_nombre(sel)
+                st.session_state["rem_nom"] = cat.get("nombre", "")
+                st.session_state["rem_rfc"] = cat.get("rfc", "")
+                st.session_state["rem_tel"] = cat.get("telefono", "")
+                st.session_state["rem_dir"] = cat.get("direccion", "")
+    
+            def _on_dest_change():
+                sel = st.session_state["sel_dest"]
+                if sel == "— Manual —":
+                    st.session_state["dest_nom"] = ""
+                    st.session_state["dest_rfc"] = ""
+                    st.session_state["dest_dir"] = ""
+                    st.session_state["dest_tel"] = ""
+                    st.session_state["dest_con"] = ""
+                    st.session_state["dest_ref"] = ""
+                    return
+                cat = get_destinatario_por_nombre(sel)
+                st.session_state["dest_nom"] = cat.get("nombre", "")
+                st.session_state["dest_rfc"] = cat.get("rfc", "")
+                st.session_state["dest_dir"] = cat.get("direccion", "")
+                st.session_state["dest_tel"] = cat.get("telefono", "")
+                st.session_state["dest_con"] = cat.get("contacto", "")
+                st.session_state["dest_ref"] = cat.get("referencias", "")
+    
+            def _on_flet_change():
+                sel = st.session_state["sel_flet"]
+                st.session_state["flet_nom"] = "" if sel == "— Manual —" else sel
+    
+            def _on_tipo_ent_change():
+                # Al cambiar tipo, limpiar selección de domicilio de entrega
+                st.session_state.pop("sel_dom_ent", None)
+    
+            def _on_dom_ent_change():
+                sel = st.session_state.get("sel_dom_ent", "— Seleccionar —")
+                if sel and sel != "— Seleccionar —":
+                    dom = get_domicilio_por_nombre(sel)
+                    st.session_state["dest_nom"] = dom.get("nombre", "")
+                    st.session_state["dest_dir"] = dom.get("direccion", "")
+                    st.session_state["dest_cp_manual"] = dom.get("cp", "")
+                    st.session_state["dest_tel"] = dom.get("telefono", "")
+                    st.session_state["dest_con"] = dom.get("contacto", "")
+                    st.session_state["dest_ref"] = dom.get("referencias", "")
+                else:
+                    st.session_state["dest_nom"] = ""
+                    st.session_state["dest_dir"] = ""
+                    st.session_state["dest_cp_manual"] = ""
+                    st.session_state["dest_tel"] = ""
+                    st.session_state["dest_con"] = ""
+                    st.session_state["dest_ref"] = ""
+    
+            # ── Remitente ─────────────────────────────────────────────────────────
+            st.markdown('<div class="seccion"><b>Remitente (origen)</b></div>',
                         unsafe_allow_html=True)
-            cr1r, cr2r = st.columns(2)
-            with cr1r:
-                empresa_remision = st.text_input("Empresa que remisiona", key="emp_rem",
-                    help="Nombre de la empresa que emite la remisión (ej. el propio cliente, su corporativo, etc.).")
-                numero_remision  = st.text_input("Número de remisión", key="num_rem",
-                    help="Folio o número de la remisión del cliente. Déjalo vacío si no aplica y selecciona el estado correspondiente.")
-                estado_remision  = st.selectbox(
-                    "Estado de la remisión",
-                    ["Digital adjunta", "En papel", "Pendiente", "Sin número"],
-                    key="est_rem",
+            rem_sel = st.selectbox(
+                "Del catálogo", ["— Manual —"] + nombres_remitentes(), key="sel_rem",
+                on_change=_on_rem_change,
+                help="Selecciona NSG u otro remitente del catálogo. Con «Manual» capturas uno nuevo.",
+            )
+            cr1, cr2 = st.columns(2)
+            with cr1:
+                rem_nombre = st.text_input(
+                    "Nombre *",
+                    key="rem_nom",
+                    help="Nombre completo del remitente (origen del embarque).",
+                )
+                rem_rfc = st.text_input(
+                    "RFC",
+                    key="rem_rfc",
+                    help="RFC del remitente para la hoja logística.",
+                )
+            with cr2:
+                rem_tel = st.text_input(
+                    "Teléfono",
+                    key="rem_tel",
+                    help="Teléfono de contacto del remitente.",
+                )
+                rem_dir = st.text_input(
+                    "Dirección",
+                    key="rem_dir",
+                    help="Dirección de origen del embarque.",
+                )
+    
+            # ── Destinatario ──────────────────────────────────────────────────────
+            st.markdown('<div class="seccion"><b>Destinatario (destino)</b></div>',
+                        unsafe_allow_html=True)
+            if st.session_state.get("tipo_ent") == "Domicilio del cliente":
+                _domicilios_cat = nombres_domicilios_entrega()
+                if _domicilios_cat:
+                    st.selectbox(
+                        "🚗 Domicilio de entrega (vehículo propio NSG)",
+                        ["— Seleccionar —"] + _domicilios_cat,
+                        key="sel_dom_ent",
+                        on_change=_on_dom_ent_change,
+                        help="Selecciona el punto de entrega. Los campos se llenarán automáticamente y puedes editarlos.",
+                    )
+                else:
+                    st.info(
+                        "No hay domicilios de entrega registrados. "
+                        "Agrégalos en **Catálogos → Domicilios de entrega** y luego vuelve aquí."
+                    )
+            dest_sel = st.selectbox(
+                "Del catálogo", ["— Manual —"] + nombres_destinatarios(), key="sel_dest",
+                on_change=_on_dest_change,
+                help="Selecciona un destinatario guardado. Con «Manual» capturas uno nuevo y puedes guardarlo al catálogo.",
+            )
+            cd1, cd2 = st.columns(2)
+            with cd1:
+                dest_nombre = st.text_input(
+                    "Nombre *",
+                    key="dest_nom",
+                    help="Nombre del consignatario al que se entrega el embarque.",
+                )
+                dest_rfc = st.text_input(
+                    "RFC",
+                    key="dest_rfc",
+                    help="RFC del destinatario para documentación.",
+                )
+                dest_dir = st.text_input(
+                    "Dirección",
+                    key="dest_dir",
+                    help="Dirección completa de entrega. Incluye el CP en formato «C.P. 12345» para detección automática.",
+                )
+                # CP: auto-detectado de la dirección o captura manual
+                _cp_auto = extraer_cp(dest_dir)
+                if _cp_auto:
+                    st.caption(f"CP detectado automáticamente: **{_cp_auto}**")
+                    dest_cp = _cp_auto
+                else:
+                    dest_cp = st.text_input(
+                        "CP (no detectado — capturar manualmente)",
+                        key="dest_cp_manual",
+                        help="Código postal de 5 dígitos. Se imprime en la hoja logística y lo usa la fletera para la guía.",
+                    )
+            with cd2:
+                dest_tel = st.text_input(
+                    "Teléfono",
+                    key="dest_tel",
+                    help="Teléfono del destinatario. Obligatorio para entregas a domicilio.",
+                )
+                dest_contacto = st.text_input(
+                    "Contacto",
+                    key="dest_con",
+                    help="Nombre de la persona que recibe en el destino.",
+                )
+                dest_refs = st.text_input(
+                    "Referencias",
+                    key="dest_ref",
+                    help="Referencias de ubicación para la fletera: color de fachada, entre qué calles, etc.",
+                )
+    
+            if dest_sel == "— Manual —" and dest_nombre and \
+                    dest_nombre not in nombres_destinatarios():
+                if st.button("💾 Guardar destinatario en catálogo", key="btn_guardar_dest"):
+                    guardar_destinatario({
+                        "nombre":      dest_nombre,
+                        "rfc":         dest_rfc,
+                        "direccion":   dest_dir,
+                        "telefono":    dest_tel,
+                        "contacto":    dest_contacto,
+                        "referencias": dest_refs,
+                    })
+                    st.rerun()
+    
+            # Botón para guardar domicilio de entrega desde el formulario
+            if (st.session_state.get("tipo_ent") == "Domicilio del cliente"
+                    and st.session_state.get("sel_dom_ent", "— Seleccionar —") == "— Seleccionar —"
+                    and dest_nombre
+                    and dest_nombre not in nombres_domicilios_entrega()):
+                if st.button("💾 Guardar domicilio en catálogo", key="btn_guardar_dom_ent"):
+                    guardar_domicilio_entrega({
+                        "nombre":      dest_nombre,
+                        "direccion":   dest_dir,
+                        "cp":          dest_cp if dest_cp else st.session_state.get("dest_cp_manual", ""),
+                        "telefono":    dest_tel,
+                        "contacto":    dest_contacto,
+                        "referencias": dest_refs,
+                    })
+                    st.rerun()
+    
+            # ── Fletera y condiciones ──────────────────────────────────────────────
+            st.markdown('<div class="seccion"><b>Fletera y condiciones</b></div>',
+                        unsafe_allow_html=True)
+    
+            # Leer tipo_ent del estado anterior para condicionar cf1 (se renderiza antes de cf2)
+            _es_domicilio_propio = st.session_state.get("tipo_ent", "Ocurre") == "Domicilio del cliente"
+    
+            cf1, cf2, cf3 = st.columns(3)
+            with cf1:
+                if _es_domicilio_propio:
+                    st.info("🚗 Entrega con vehículo propio NSG — sin fletera externa.")
+                    fletera  = "Vehículo propio NSG"
+                    flet_sel = "— Manual —"
+                else:
+                    flet_sel = st.selectbox(
+                        "Fletera *", ["— Manual —"] + nombres_fleteras(), key="sel_flet",
+                        on_change=_on_flet_change,
+                        help="Empresa transportista. El sistema compara con las notas del Bind y avisa si hay diferencia.",
+                    )
+                    fletera = st.text_input(
+                        "Nombre fletera",
+                        key="flet_nom",
+                        help="Nombre exacto de la fletera tal como aparece en sus guías.",
+                    )
+                    if flet_sel == "— Manual —" and fletera and \
+                            fletera not in nombres_fleteras():
+                        if st.button("💾 Guardar fletera", key="btn_guardar_fletera"):
+                            guardar_fletera({"nombre": fletera})
+                            st.rerun()
+            with cf2:
+                tipo_entrega = st.selectbox(
+                    "Tipo de entrega *",
+                    ["Ocurre", "Domicilio", "Domicilio del cliente"],
+                    key="tipo_ent",
+                    on_change=_on_tipo_ent_change,
                     help=(
-                        "Digital adjunta: se subió el archivo PDF/imagen aquí. "
-                        "En papel: viene físicamente con el embarque. "
-                        "Pendiente: el cliente aún no la envía. "
-                        "Sin número: existe la remisión pero no tiene folio visible."
+                        "Ocurre: el cliente recoge en la agencia de la fletera. "
+                        "Domicilio: la fletera entrega en el domicilio del cliente. "
+                        "Domicilio del cliente: NSG entrega directamente con vehículo propio."
                     ),
                 )
-            with cr2r:
-                ext_list    = sorted({e.lstrip(".") for e in FORMATOS_VALIDOS})
-                archivo_rem = st.file_uploader(
-                    "PDF o imagen de la remisión",
-                    type=ext_list,
-                    key=f"uploader_rem_{st.session_state['upload_key']}",
-                    help="Sube el PDF o foto de la remisión del cliente.",
-                )
-                if archivo_rem is not None:
-                    if st.button("📎 Procesar remisión", key="btn_rem"):
-                        with st.spinner("Procesando remisión..."):
-                            rem_bytes, msg_rem = guardar_remision(archivo_rem)
-                        if rem_bytes:
-                            st.session_state["_bytes_pdf_remision"] = rem_bytes
-                            st.success(f"✅ {msg_rem}")
-                        else:
-                            st.error(msg_rem)
-
-                if st.session_state.get("_bytes_pdf_remision"):
-                    st.caption(f"✅ Remisión lista ({len(st.session_state['_bytes_pdf_remision'])//1024} KB)")
+                if _es_domicilio_propio:
+                    condicion_flete = "Entrega directa"
+                    st.caption("Sin cargo de flete — entrega directa con vehículo NSG.")
                 else:
-                    st.caption("Sin remisión digital — se puede continuar.")
-        else:
-            estado_remision = ""
+                    condicion_flete = st.selectbox(
+                        "Condición del flete *", ["Por cobrar", "Pagado"], key="cond_flet",
+                        help="Por cobrar: el destinatario paga el flete al recibirlo. Pagado: NSG cubre el costo del flete.",
+                    )
+            with cf3:
+                con_remision = st.checkbox("Con remisión del cliente", key="con_rem",
+                    help="Activa si el cliente envía una remisión que debe acompañar al embarque (física o digital).")
+    
+            # ── Pedido interno de Planta ───────────────────────────────────────────
+            pi1, _ = st.columns([1, 2])
+            with pi1:
+                pedido_interno = st.text_input(
+                    "Pedido interno de Planta (opcional)",
+                    placeholder="Ej. P001  ó  P001, P002",
+                    key="ped_int",
+                    help="Número(s) de pedido internos de Planta. Si son varios, sepáralos con coma. Se puede buscar por número individual en el Historial.",
+                )
+    
+            # ── Sección remisión ───────────────────────────────────────────────────
+            empresa_remision = ""
+            numero_remision  = ""
+    
+            if con_remision:
+                st.markdown('<div class="seccion"><b>📄 Remisión del cliente</b></div>',
+                            unsafe_allow_html=True)
+                cr1r, cr2r = st.columns(2)
+                with cr1r:
+                    empresa_remision = st.text_input("Empresa que remisiona", key="emp_rem",
+                        help="Nombre de la empresa que emite la remisión (ej. el propio cliente, su corporativo, etc.).")
+                    numero_remision  = st.text_input("Número de remisión", key="num_rem",
+                        help="Folio o número de la remisión del cliente. Déjalo vacío si no aplica y selecciona el estado correspondiente.")
+                    estado_remision  = st.selectbox(
+                        "Estado de la remisión",
+                        ["Digital adjunta", "En papel", "Pendiente", "Sin número"],
+                        key="est_rem",
+                        help=(
+                            "Digital adjunta: se subió el archivo PDF/imagen aquí. "
+                            "En papel: viene físicamente con el embarque. "
+                            "Pendiente: el cliente aún no la envía. "
+                            "Sin número: existe la remisión pero no tiene folio visible."
+                        ),
+                    )
+                with cr2r:
+                    ext_list    = sorted({e.lstrip(".") for e in FORMATOS_VALIDOS})
+                    archivo_rem = st.file_uploader(
+                        "PDF o imagen de la remisión",
+                        type=ext_list,
+                        key=f"uploader_rem_{st.session_state['upload_key']}",
+                        help="Sube el PDF o foto de la remisión del cliente.",
+                    )
+                    if archivo_rem is not None:
+                        if st.button("📎 Procesar remisión", key="btn_rem"):
+                            with st.spinner("Procesando remisión..."):
+                                rem_bytes, msg_rem = guardar_remision(archivo_rem)
+                            if rem_bytes:
+                                st.session_state["_bytes_pdf_remision"] = rem_bytes
+                                st.success(f"✅ {msg_rem}")
+                            else:
+                                st.error(msg_rem)
+    
+                    if st.session_state.get("_bytes_pdf_remision"):
+                        st.caption(f"✅ Remisión lista ({len(st.session_state['_bytes_pdf_remision'])//1024} KB)")
+                    else:
+                        st.caption("Sin remisión digital — se puede continuar.")
+            else:
+                estado_remision = ""
+    
+            # ── Observaciones ─────────────────────────────────────────────────────
+            obs_auto = generar_observaciones(
+                fletera, tipo_entrega, condicion_flete,
+                con_remision, empresa_remision, numero_remision,
+                estado_remision=estado_remision,
+            )
+            st.caption("**Estructura logística generada automáticamente:**")
+            st.code(obs_auto, language=None)
+    
+            notas_adicionales = st.text_area(
+                "Notas adicionales (operativas, opcionales)",
+                value="", height=60, key="notas_adic",
+                help="Se añadirán al final. Usa este campo para información no estandarizada.",
+            )
+            observaciones = (
+                obs_auto
+                + (f" | {notas_adicionales.strip()}" if notas_adicionales.strip() else "")
+            )
+    
+            # ── Guardar en session_state ───────────────────────────────────────────
+            st.session_state["datos_logisticos"] = {
+                "remitente_nombre":         rem_nombre,
+                "remitente_rfc":            rem_rfc,
+                "remitente_tel":            rem_tel,
+                "remitente_direccion":      rem_dir,
+                "destinatario_nombre":      dest_nombre,
+                "destinatario_rfc":         dest_rfc,
+                "destinatario_direccion":   dest_dir,
+                "destinatario_cp":          dest_cp,
+                "destinatario_tel":         dest_tel,
+                "destinatario_contacto":    dest_contacto,
+                "destinatario_referencias": dest_refs,
+                "fletera":                  fletera,
+                "tipo_entrega":             tipo_entrega,
+                "condicion_flete":          condicion_flete,
+                "con_remision":             con_remision,
+                "empresa_remision":         empresa_remision,
+                "numero_remision":          numero_remision,
+                "estado_remision":          estado_remision,
+                "ruta_pdf_remision":        "ok" if st.session_state.get("_bytes_pdf_remision") else "",
+                "observaciones":            observaciones,
+                "orden_compra":             datos_bind.get("orden_compra", ""),
+                "pedido_interno":           pedido_interno,
+            }
 
-        # ── Observaciones ─────────────────────────────────────────────────────
-        obs_auto = generar_observaciones(
-            fletera, tipo_entrega, condicion_flete,
-            con_remision, empresa_remision, numero_remision,
-            estado_remision=estado_remision,
-        )
-        st.caption("**Estructura logística generada automáticamente:**")
-        st.code(obs_auto, language=None)
-
-        notas_adicionales = st.text_area(
-            "Notas adicionales (operativas, opcionales)",
-            value="", height=60, key="notas_adic",
-            help="Se añadirán al final. Usa este campo para información no estandarizada.",
-        )
-        observaciones = (
-            obs_auto
-            + (f" | {notas_adicionales.strip()}" if notas_adicionales.strip() else "")
-        )
-
-        # ── Guardar en session_state ───────────────────────────────────────────
-        st.session_state["datos_logisticos"] = {
-            "remitente_nombre":         rem_nombre,
-            "remitente_rfc":            rem_rfc,
-            "remitente_tel":            rem_tel,
-            "remitente_direccion":      rem_dir,
-            "destinatario_nombre":      dest_nombre,
-            "destinatario_rfc":         dest_rfc,
-            "destinatario_direccion":   dest_dir,
-            "destinatario_cp":          dest_cp,
-            "destinatario_tel":         dest_tel,
-            "destinatario_contacto":    dest_contacto,
-            "destinatario_referencias": dest_refs,
-            "fletera":                  fletera,
-            "tipo_entrega":             tipo_entrega,
-            "condicion_flete":          condicion_flete,
-            "con_remision":             con_remision,
-            "empresa_remision":         empresa_remision,
-            "numero_remision":          numero_remision,
-            "estado_remision":          estado_remision,
-            "ruta_pdf_remision":        "ok" if st.session_state.get("_bytes_pdf_remision") else "",
-            "observaciones":            observaciones,
-            "orden_compra":             datos_bind.get("orden_compra", ""),
-            "pedido_interno":           pedido_interno,
-        }
+_paso3(datos_bind)
 
 st.divider()
 

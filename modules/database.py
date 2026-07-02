@@ -94,6 +94,9 @@ def init_database():
                 activo      INTEGER      DEFAULT 1
             )
         """)
+        _execute(conn,
+            "ALTER TABLE embarques ADD COLUMN IF NOT EXISTS impreso BOOLEAN DEFAULT FALSE"
+        )
         conn.commit()
         row = _fetchone(conn, "SELECT COUNT(*) AS n FROM remitentes")
         if row and int(row["n"]) == 0:
@@ -683,6 +686,18 @@ def actualizar_estado_embarque(embarque_id: int, estado: str):
                 "UPDATE embarques SET estado_embarque=%s WHERE id=%s",
                 (estado, embarque_id),
             )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        _release(conn)
+
+
+def marcar_impreso(embarque_id: int, impreso: bool):
+    conn = get_connection()
+    try:
+        _execute(conn, "UPDATE embarques SET impreso=%s WHERE id=%s", (impreso, embarque_id))
         conn.commit()
     except Exception:
         conn.rollback()

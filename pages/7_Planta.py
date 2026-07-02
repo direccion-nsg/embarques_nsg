@@ -19,6 +19,7 @@ from config import APP_NAME, VERSION
 from modules.database import (
     init_database, get_embarques_filtrados,
     actualizar_estado_embarque, regresar_embarque_a_bandeja, cancelar_embarque,
+    marcar_impreso,
 )
 from modules.storage import descargar_pdf_bytes
 from modules.sidebar import render_sidebar
@@ -128,8 +129,7 @@ for emb in embarques:
 
         with col_acciones:
             # ── Descargar / Imprimir PDF ──────────────────────────────────────
-            _impreso_key = f"_impreso_{emb_id}"
-            ya_impreso = st.session_state.get(_impreso_key, False)
+            ya_impreso = emb.get("impreso", False)
 
             if ruta_pdf:
                 try:
@@ -169,12 +169,12 @@ for emb in embarques:
                         _ci.caption("✅ Ya impreso")
                         if _cr.button("↩", key=f"reset_imp_{emb_id}",
                                       help="Desmarcar como impreso"):
-                            st.session_state[_impreso_key] = False
+                            marcar_impreso(emb_id, False)
                             st.rerun()
                     else:
                         if st.button("✅ Marcar impreso", key=f"marcar_imp_{emb_id}",
                                      use_container_width=True):
-                            st.session_state[_impreso_key] = True
+                            marcar_impreso(emb_id, True)
                             st.rerun()
                 except Exception:
                     st.warning("PDF no disponible")
