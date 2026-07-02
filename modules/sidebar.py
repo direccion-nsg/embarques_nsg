@@ -103,18 +103,21 @@ def render_sidebar(app_name: str, version: str):
 
             st.divider()
             if n_sin_guia:
-                if st.button(f"⚠ {n_sin_guia} sin guía",
+                st.markdown('<span class="nsg-btn-danger"></span>', unsafe_allow_html=True)
+                if st.button(f"● {n_sin_guia} sin guía",
                              key="cnt_sin_guia", use_container_width=True,
                              help=f"{n_sin_guia} embarque(s) embarcados sin guía registrada — clic para ir a Guías"):
                     st.switch_page("pages/5_Guias.py")
             if n_parcial:
-                if st.button(f"🔴 {n_parcial} salidas parciales",
+                st.markdown('<span class="nsg-btn-warn"></span>', unsafe_allow_html=True)
+                if st.button(f"● {n_parcial} salidas parciales",
                              key="cnt_parciales", use_container_width=True,
                              help=f"{n_parcial} salida(s) con entregas incompletas — clic para filtrar en Historial"):
                     st.session_state["_hist_prefiltro_estado"] = "Parcial"
                     st.switch_page("pages/2_Historial.py")
             if n_pend:
-                if st.button(f"⬜ {n_pend} pendientes",
+                st.markdown('<span class="nsg-btn-info"></span>', unsafe_allow_html=True)
+                if st.button(f"● {n_pend} pendientes",
                              key="cnt_pend", use_container_width=True,
                              help=f"{n_pend} salida(s) sin embarques — clic para filtrar en Historial"):
                     st.session_state["_hist_prefiltro_estado"] = "Pendiente"

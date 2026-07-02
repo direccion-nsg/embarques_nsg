@@ -233,7 +233,7 @@ section[data-testid="stSidebar"] label {
     color: #94A3B8 !important;
 }
 
-/* Botones en sidebar — fondo oscuro, texto claro en el elemento raíz Y en los hijos */
+/* Botones en sidebar — base oscura */
 section[data-testid="stSidebar"] button {
     background: rgba(255,255,255,0.08) !important;
     color: #CBD5E1 !important;
@@ -254,6 +254,72 @@ section[data-testid="stSidebar"] button:hover p,
 section[data-testid="stSidebar"] button:hover span,
 section[data-testid="stSidebar"] button:hover div {
     color: #FFFFFF !important;
+}
+
+/* ── Semáforo: botones de contador con color según severidad ── */
+/* Técnica: marcador invisible antes del botón → selector :has() */
+
+/* Rojo — crítico (sin guía) */
+section[data-testid="stSidebar"] div:has(.nsg-btn-danger) + div button {
+    background: rgba(239,68,68,0.15) !important;
+    border-left: 3px solid #EF4444 !important;
+    border-top: 1px solid rgba(239,68,68,0.25) !important;
+    border-bottom: 1px solid rgba(239,68,68,0.25) !important;
+    border-right: 1px solid rgba(239,68,68,0.25) !important;
+    color: #FCA5A5 !important;
+}
+section[data-testid="stSidebar"] div:has(.nsg-btn-danger) + div button p,
+section[data-testid="stSidebar"] div:has(.nsg-btn-danger) + div button span,
+section[data-testid="stSidebar"] div:has(.nsg-btn-danger) + div button div {
+    color: #FCA5A5 !important;
+}
+section[data-testid="stSidebar"] div:has(.nsg-btn-danger) + div button:hover {
+    background: rgba(239,68,68,0.35) !important;
+    color: #FFFFFF !important;
+}
+section[data-testid="stSidebar"] div:has(.nsg-btn-danger) + div button:hover p,
+section[data-testid="stSidebar"] div:has(.nsg-btn-danger) + div button:hover span,
+section[data-testid="stSidebar"] div:has(.nsg-btn-danger) + div button:hover div {
+    color: #FFFFFF !important;
+}
+
+/* Ámbar — advertencia (parciales) */
+section[data-testid="stSidebar"] div:has(.nsg-btn-warn) + div button {
+    background: rgba(245,158,11,0.15) !important;
+    border-left: 3px solid #F59E0B !important;
+    border-top: 1px solid rgba(245,158,11,0.25) !important;
+    border-bottom: 1px solid rgba(245,158,11,0.25) !important;
+    border-right: 1px solid rgba(245,158,11,0.25) !important;
+    color: #FCD34D !important;
+}
+section[data-testid="stSidebar"] div:has(.nsg-btn-warn) + div button p,
+section[data-testid="stSidebar"] div:has(.nsg-btn-warn) + div button span,
+section[data-testid="stSidebar"] div:has(.nsg-btn-warn) + div button div {
+    color: #FCD34D !important;
+}
+section[data-testid="stSidebar"] div:has(.nsg-btn-warn) + div button:hover {
+    background: rgba(245,158,11,0.35) !important;
+    color: #FFFFFF !important;
+}
+section[data-testid="stSidebar"] div:has(.nsg-btn-warn) + div button:hover p,
+section[data-testid="stSidebar"] div:has(.nsg-btn-warn) + div button:hover span,
+section[data-testid="stSidebar"] div:has(.nsg-btn-warn) + div button:hover div {
+    color: #FFFFFF !important;
+}
+
+/* Gris azulado — informativo (pendientes) */
+section[data-testid="stSidebar"] div:has(.nsg-btn-info) + div button {
+    background: rgba(100,116,139,0.15) !important;
+    border-left: 3px solid #64748B !important;
+    border-top: 1px solid rgba(100,116,139,0.25) !important;
+    border-bottom: 1px solid rgba(100,116,139,0.25) !important;
+    border-right: 1px solid rgba(100,116,139,0.25) !important;
+    color: #94A3B8 !important;
+}
+section[data-testid="stSidebar"] div:has(.nsg-btn-info) + div button p,
+section[data-testid="stSidebar"] div:has(.nsg-btn-info) + div button span,
+section[data-testid="stSidebar"] div:has(.nsg-btn-info) + div button div {
+    color: #94A3B8 !important;
 }
 
 /* Indicadores de estado (override para sidebar oscuro) */
