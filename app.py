@@ -1019,10 +1019,10 @@ else:
 
     _sin_pedido = not datos_log.get("pedido_interno", "").strip()
     if _sin_pedido:
-        st.error("⚠️ Captura el **Pedido interno de Planta** en el Paso 3 antes de generar. "
-                 "Si no hay pedido, escribe «Muestras» o «Salida interna».")
+        st.warning("⚠️ Captura el **Pedido interno de Planta** en el Paso 3 antes de generar. "
+                   "Si no hay pedido, escribe «Muestras» o «Salida interna».")
 
-    btn_disabled = bool(errores_val) or (bool(warnings_val) and not confirmar) or _sin_pedido
+    btn_disabled = bool(errores_val) or (bool(warnings_val) and not confirmar)
 
     if st.button(
         "📦 Generar Paquete de Embarque",
@@ -1030,6 +1030,12 @@ else:
         disabled=btn_disabled,
         key="btn_generar",
     ):
+        # Validar pedido_interno aquí (leer session_state directamente para capturar
+        # el valor actualizado por el fragment de Paso 3 sin necesitar full-rerun previo)
+        if not st.session_state.get("ped_int", "").strip():
+            st.error("⚠️ Captura el **Pedido interno de Planta** en el Paso 3 antes de generar. "
+                     "Si no hay pedido, escribe «Muestras» o «Salida interna».")
+            st.stop()
         with st.spinner("Generando paquete PDF..."):
             try:
                 edited_df = st.session_state.get("_partidas_df")
