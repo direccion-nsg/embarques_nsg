@@ -1017,7 +1017,7 @@ else:
     else:
         st.info("📄 Paquete: **Hoja Logística → Hoja de Salida Bind**")
 
-    _sin_pedido = not datos_log.get("pedido_interno", "").strip()
+    _sin_pedido = not st.session_state.get("ped_int", "").strip()
     if _sin_pedido:
         st.warning("⚠️ Captura el **Pedido interno de Planta** en el Paso 3 antes de generar. "
                    "Si no hay pedido, escribe «Muestras» o «Salida interna».")
