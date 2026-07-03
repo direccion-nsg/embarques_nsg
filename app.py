@@ -966,7 +966,12 @@ def _paso3(datos_bind):
                 "pedido_interno":           pedido_interno,
             }
 
+_tenia_datos_log = bool(st.session_state.get("datos_logisticos"))
 _paso3(datos_bind)
+# Si datos_logisticos se acaba de crear (primera ejecución del fragment tras extracción),
+# el sidebar ya se renderizó con valor None → forzar full rerun para que avance el stepper
+if not _tenia_datos_log and bool(st.session_state.get("datos_logisticos")):
+    st.rerun()
 
 st.divider()
 
