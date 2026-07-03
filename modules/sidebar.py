@@ -52,11 +52,11 @@ def render_sidebar(app_name: str, version: str):
         if st.session_state.get("_current_page") == "nuevo_embarque":
             _sp = 1
             if st.session_state.get("datos_bind"):
-                _sp = 2
+                _sp = 3  # PDF extraído → 1 y 2 completos, 3 activo
             if st.session_state.get("datos_logisticos"):
-                _sp = 3
+                _sp = 4  # Logística llena → 1,2,3 completos, 4 activo
             if st.session_state.get("_bytes_paquete"):
-                _sp = 4
+                _sp = 5  # Paquete generado → todos completos
             _pasos_lbl = ["Subir PDF", "Revisar datos", "Datos logísticos", "Generar"]
             _lineas = []
             for _pi, _pl in enumerate(_pasos_lbl, start=1):
