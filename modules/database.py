@@ -122,26 +122,28 @@ def _seed_defaults(conn):
 
 
 def _reparar_cancelados(conn):
-    """Limpia embarque_partidas residuales de embarques cancelados y recalcula estados."""
+    """Limpia residuales de embarques cancelados y marca la salida como Cancelada si aplica."""
     cancelados = _fetchall(conn,
         "SELECT id FROM embarques WHERE estado_embarque='Cancelado'",
     )
+    salidas_a_revisar = set()
     for emb in cancelados:
         eid = emb["id"]
-        # ¿Quedan filas en embarque_partidas para este embarque?
         residuales = _fetchall(conn,
             "SELECT DISTINCT partida_id FROM embarque_partidas WHERE embarque_id=%s", (eid,)
         )
-        if not residuales:
-            continue
-        _execute(conn, "DELETE FROM embarque_partidas WHERE embarque_id=%s", (eid,))
-        for row in residuales:
-            _actualizar_cantidad_partida(conn, row["partida_id"])
+        if residuales:
+            _execute(conn, "DELETE FROM embarque_partidas WHERE embarque_id=%s", (eid,))
+            for row in residuales:
+                _actualizar_cantidad_partida(conn, row["partida_id"])
         salidas = _fetchall(conn,
             "SELECT DISTINCT salida_id FROM embarque_salidas WHERE embarque_id=%s", (eid,)
         )
         for row in salidas:
-            _recalcular_estado_salida(conn, row["salida_id"])
+            salidas_a_revisar.add(row["salida_id"])
+    for sid in salidas_a_revisar:
+        _recalcular_estado_salida(conn, sid)
+        _cancelar_salida_si_todos_cancelados(conn, sid)
     if cancelados:
         conn.commit()
 
@@ -801,6 +803,7 @@ def cancelar_embarque(embarque_id: int):
         )
         for row in salidas_afectadas:
             _recalcular_estado_salida(conn, row["salida_id"])
+            _cancelar_salida_si_todos_cancelados(conn, row["salida_id"])
         conn.commit()
     except Exception:
         conn.rollback()
@@ -1197,6 +1200,20 @@ def _recalcular_estado_salida(conn, salida_id: int):
     _execute(conn,
         "UPDATE salidas_bind SET estado=%s WHERE id=%s", (nuevo, salida_id)
     )
+
+
+def _cancelar_salida_si_todos_cancelados(conn, salida_id: int):
+    """Si todos los embarques de esta salida están cancelados, marca la salida como Cancelada."""
+    rows = _fetchall(conn,
+        """SELECT e.estado_embarque FROM embarques e
+           JOIN embarque_salidas es ON es.embarque_id = e.id
+           WHERE es.salida_id = %s""",
+        (salida_id,),
+    )
+    if rows and all(r["estado_embarque"] == "Cancelado" for r in rows):
+        _execute(conn,
+            "UPDATE salidas_bind SET estado='Cancelada' WHERE id=%s", (salida_id,)
+        )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
