@@ -170,9 +170,9 @@ with st.expander("🔍 Filtros de búsqueda", expanded=True):
     f4, f5, f6 = st.columns([2, 2, 2])
     filtro_estado  = f4.selectbox(
         "Estado salida",
-        ["Todos", "Pendiente", "Parcial", "Completada"],
+        ["Todos", "Pendiente", "Parcial", "Completada", "Cancelada"],
         key="hist_estado",
-        help="Pendiente: ninguna partida embarcada. Parcial: algunas partidas embarcadas. Completada: todas las partidas cubiertas.",
+        help="Pendiente: ninguna partida embarcada. Parcial: algunas partidas embarcadas. Completada: todas las partidas cubiertas. Cancelada: todos sus embarques fueron cancelados.",
     )
     filtro_desde   = f5.date_input(
         "Fecha desde", value=date.today() - timedelta(days=90),
@@ -551,6 +551,8 @@ for sal in salidas:
                                       use_container_width=True):
                             try:
                                 cancelar_embarque(emb["id"])
+                                _salidas_cached.clear()
+                                _detalle_cached.clear()
                                 st.session_state.pop(f"_conf_cancel_hist_{_k}", None)
                                 st.warning("❌ Embarque cancelado.")
                                 st.rerun()

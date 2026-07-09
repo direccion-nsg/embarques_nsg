@@ -820,6 +820,17 @@ def regresar_embarque_a_bandeja(embarque_id: int, motivo: str = ""):
             "UPDATE embarques SET estado_embarque='Preparado', en_bandeja=1, motivo_regreso=%s WHERE id=%s",
             (motivo, embarque_id),
         )
+        # Si la salida estaba marcada como Cancelada, reactivarla
+        salidas = _fetchall(conn,
+            "SELECT DISTINCT salida_id FROM embarque_salidas WHERE embarque_id=%s",
+            (embarque_id,),
+        )
+        for row in salidas:
+            sal = _fetchone(conn,
+                "SELECT estado FROM salidas_bind WHERE id=%s", (row["salida_id"],)
+            )
+            if sal and sal["estado"] == "Cancelada":
+                _recalcular_estado_salida(conn, row["salida_id"])
         conn.commit()
     except Exception:
         conn.rollback()
