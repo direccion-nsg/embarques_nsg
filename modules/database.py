@@ -105,6 +105,8 @@ def init_database():
         if row and int(row["n"]) == 0:
             _seed_defaults(conn)
             conn.commit()
+        # Reparación: embarques cancelados con embarque_partidas residuales
+        _reparar_cancelados(conn)
     except Exception:
         conn.rollback()
     finally:
@@ -117,6 +119,31 @@ def _seed_defaults(conn):
         "INSERT INTO remitentes (nombre, rfc, direccion, telefono) VALUES (%s,%s,%s,%s)",
         (d["nombre"], d.get("rfc",""), d.get("direccion",""), d.get("telefono","")),
     )
+
+
+def _reparar_cancelados(conn):
+    """Limpia embarque_partidas residuales de embarques cancelados y recalcula estados."""
+    cancelados = _fetchall(conn,
+        "SELECT id FROM embarques WHERE estado_embarque='Cancelado'",
+    )
+    for emb in cancelados:
+        eid = emb["id"]
+        # ¿Quedan filas en embarque_partidas para este embarque?
+        residuales = _fetchall(conn,
+            "SELECT DISTINCT partida_id FROM embarque_partidas WHERE embarque_id=%s", (eid,)
+        )
+        if not residuales:
+            continue
+        _execute(conn, "DELETE FROM embarque_partidas WHERE embarque_id=%s", (eid,))
+        for row in residuales:
+            _actualizar_cantidad_partida(conn, row["partida_id"])
+        salidas = _fetchall(conn,
+            "SELECT DISTINCT salida_id FROM embarque_salidas WHERE embarque_id=%s", (eid,)
+        )
+        for row in salidas:
+            _recalcular_estado_salida(conn, row["salida_id"])
+    if cancelados:
+        conn.commit()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -747,13 +774,33 @@ def marcar_impreso(embarque_id: int, impreso: bool):
 
 
 def cancelar_embarque(embarque_id: int):
-    """Marca el embarque como Cancelado y lo saca de la bandeja."""
+    """Marca el embarque como Cancelado, lo saca de la bandeja y revierte cantidades embarcadas."""
     conn = get_connection()
     try:
         _execute(conn,
             "UPDATE embarques SET estado_embarque='Cancelado', en_bandeja=0 WHERE id=%s",
             (embarque_id,),
         )
+        # Obtener partidas afectadas antes de borrar los vínculos
+        partidas_afectadas = _fetchall(conn,
+            "SELECT DISTINCT partida_id FROM embarque_partidas WHERE embarque_id=%s",
+            (embarque_id,),
+        )
+        # Eliminar las cantidades de este embarque de embarque_partidas
+        _execute(conn,
+            "DELETE FROM embarque_partidas WHERE embarque_id=%s",
+            (embarque_id,),
+        )
+        # Recalcular cantidad_embarcada y estado de cada partida afectada
+        for row in partidas_afectadas:
+            _actualizar_cantidad_partida(conn, row["partida_id"])
+        # Recalcular estado de cada salida vinculada a este embarque
+        salidas_afectadas = _fetchall(conn,
+            "SELECT DISTINCT salida_id FROM embarque_salidas WHERE embarque_id=%s",
+            (embarque_id,),
+        )
+        for row in salidas_afectadas:
+            _recalcular_estado_salida(conn, row["salida_id"])
         conn.commit()
     except Exception:
         conn.rollback()
@@ -980,7 +1027,7 @@ def count_embarques_sin_guia() -> int:
     conn = get_connection()
     try:
         row = _fetchone(conn,
-            "SELECT COUNT(*) AS n FROM embarques WHERE estado_embarque NOT IN ('Guía capturada','Cerrado')"
+            "SELECT COUNT(*) AS n FROM embarques WHERE estado_embarque NOT IN ('Guía capturada','Cerrado','Cancelado')"
         )
         return int(row["n"]) if row else 0
     finally:
