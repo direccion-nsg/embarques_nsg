@@ -11,6 +11,7 @@ import psycopg2.pool
 import psycopg2.extras
 
 from config import NSG_REMITENTE_DEFAULT
+from modules.utils import parse_cantidad
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -388,10 +389,7 @@ def crear_salida(datos: dict, productos: list) -> int:
             ),
         )
         for p in productos:
-            try:
-                cantidad = float(str(p.get("cantidad","0")).replace(",",".") or 0)
-            except ValueError:
-                cantidad = 0.0
+            cantidad = parse_cantidad(p.get("cantidad", "0"))
             _execute(conn,
                 """INSERT INTO partidas_bind
                    (salida_id, codigo, descripcion, unidad, cantidad_bind)
@@ -477,10 +475,7 @@ def actualizar_partidas(salida_id: int, productos: list):
         _execute(conn, "DELETE FROM partidas_bind WHERE salida_id=%s", (salida_id,))
 
         for p in productos:
-            try:
-                cantidad = float(str(p.get("cantidad","0")).replace(",",".") or 0)
-            except ValueError:
-                cantidad = 0.0
+            cantidad = parse_cantidad(p.get("cantidad", "0"))
             codigo = p.get("codigo","")
             ya_embarcada = existentes.get(codigo, 0.0)
             if ya_embarcada >= cantidad:

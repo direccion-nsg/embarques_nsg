@@ -24,6 +24,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import SALIDA_DIR, ensure_dirs
 from modules.consistency import extraer_cp
+from modules.utils import parse_cantidad
 
 # ── Paleta de colores ─────────────────────────────────────────────────────────
 ROJO_NSG    = colors.HexColor("#C0392B")   # rojo corporativo — solo header y texto de etiquetas
@@ -281,10 +282,7 @@ def _tabla_productos(estilos, productos: list) -> Table:
     productos_validos = []
     for p in (productos or []):
         qty_raw = p.get("cantidad_hoy", p.get("cantidad", ""))
-        try:
-            qty_val = float(str(qty_raw).replace(",", ".") or 0)
-        except (ValueError, TypeError):
-            qty_val = 0.0
+        qty_val = parse_cantidad(qty_raw)
         if qty_val <= 0:
             continue  # omitir partidas con cantidad 0
         qty_fmt = int(qty_val) if qty_val == int(qty_val) else qty_val

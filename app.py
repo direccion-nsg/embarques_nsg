@@ -40,7 +40,7 @@ from modules.catalogs import (
     nombres_domicilios_entrega, get_domicilio_por_nombre,
     guardar_domicilio_entrega,
 )
-from modules.utils import construir_datos_mensaje
+from modules.utils import construir_datos_mensaje, parse_cantidad as _to_float
 from modules.storage import init_storage, subir_pdf, generar_url_firmada
 from modules.messaging import construir_mensaje_teams
 from modules.auth import require_auth
@@ -69,13 +69,6 @@ require_auth("nuevo")
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
-
-def _to_float(v) -> float:
-    try:
-        return float(str(v).replace(",", ".") or 0)
-    except (ValueError, TypeError):
-        return 0.0
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Estado de sesión
