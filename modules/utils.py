@@ -1,5 +1,6 @@
 """Utilidades generales de la aplicación."""
 
+import math
 import os
 import re
 import sys
@@ -18,6 +19,7 @@ def parse_cantidad(v) -> float:
     no parseable, y silenciosamente cae a 0.0), así que primero se
     eliminan las comas de miles y solo se trata como separador decimal
     si no hay un punto ya presente en el valor.
+    Los valores vacíos, inválidos o no finitos (NaN e infinito) devuelven 0.0.
     """
     s = str(v).strip()
     if not s:
@@ -34,7 +36,8 @@ def parse_cantidad(v) -> float:
         else:
             s = s.replace(",", ".")
     try:
-        return float(s or 0)
+        cantidad = float(s or 0)
+        return cantidad if math.isfinite(cantidad) else 0.0
     except (ValueError, TypeError):
         return 0.0
 
