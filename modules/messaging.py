@@ -14,10 +14,11 @@ import webbrowser
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import getaddresses
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
-    EMAIL_DESTINO, SALIDA_DIR,
+    EMAIL_DESTINO, EMAIL_DESTINO_ADICIONAL_PLANTA, SALIDA_DIR,
     EMAIL_ASUNTO_TEMPLATE, EMAIL_CUERPO_TEMPLATE,
     TEAMS_MENSAJE_TEMPLATE,
     EMAIL_ASUNTO_MULTI_TEMPLATE, EMAIL_CUERPO_MULTI_TEMPLATE,
@@ -148,6 +149,10 @@ def enviar_email_planta(items: list, url_pdf: str = "", enviado_por: str = "") -
     msg = MIMEMultipart()
     msg["From"]    = cfg["usuario"]
     msg["To"]      = cfg["destinatario"]
+    # Conservar los destinatarios de Secrets y agregar Coordinación sin duplicarla.
+    destinatarios = {direccion.lower() for _, direccion in getaddresses([msg["To"]])}
+    if EMAIL_DESTINO_ADICIONAL_PLANTA.lower() not in destinatarios:
+        msg.replace_header("To", f"{msg['To']}, {EMAIL_DESTINO_ADICIONAL_PLANTA}")
     msg["Subject"] = asunto
     msg.attach(MIMEText(cuerpo, "plain", "utf-8"))
 

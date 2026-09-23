@@ -28,6 +28,7 @@ DB_PATH = os.path.join(DB_DIR, "embarques.db")
 
 # Dirección de destino para envíos (Almacén Teoloyucan)
 EMAIL_DESTINO = "almacen@gruponsg.com"
+EMAIL_DESTINO_ADICIONAL_PLANTA = "coordinacion@gruponsg.com"
 TEAMS_CANAL = ""  # Webhook Teams — se configura al implementar Microsoft Graph
 
 EMAIL_ASUNTO_TEMPLATE = "Paquete de Embarque | Salida {folio_bind} | {cliente}"
