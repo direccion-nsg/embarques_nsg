@@ -73,13 +73,33 @@ class AuthSSOTests(unittest.TestCase):
         self.assertFalse(auth.puede("usuarios"))
         self.st.rerun.assert_called_once()
 
-    def test_ticket_with_existing_session_is_discarded_without_http(self):
-        self.st.session_state["_auth_user"] = LEGACY_USER.copy()
+    def test_valid_ticket_overrides_existing_admin_session(self):
+        local_user = {"id": "legacy-admin", "email": "admin@example.test", "role": "admin", "nombre": "Admin local"}
+        self.st.session_state["_auth_user"] = local_user
         self.st.query_params["sso_ticket"] = TICKET
-        with patch.object(auth.requests, "post") as post:
-            self.assertEqual(auth.require_auth("historial"), LEGACY_USER)
-        post.assert_not_called()
+        with patch.object(auth.requests, "post", return_value=self.response()) as post:
+            with self.assertRaises(RerunSignal):
+                auth.require_auth("historial")
+        post.assert_called_once()
+        self.assertEqual(self.st.session_state["_auth_user"], LEGACY_USER)
+        self.assertEqual(self.st.session_state["_auth_user"]["role"], "direccion")
+        self.assertEqual(self.st.session_state["_auth_source"], "sso")
+        self.assertEqual(auth.require_auth("historial"), LEGACY_USER)
+        self.assertFalse(auth.puede("usuarios"))
         self.assertNotIn("sso_ticket", self.st.query_params)
+
+    def test_invalid_ticket_preserves_existing_local_session(self):
+        local_user = {"id": "legacy-admin", "email": "admin@example.test", "role": "admin", "nombre": "Admin local"}
+        self.st.session_state["_auth_user"] = local_user.copy()
+        self.st.query_params["sso_ticket"] = TICKET
+        with patch.object(auth.requests, "post", return_value=self.response(401)) as post:
+            self.assertEqual(auth.require_auth("usuarios"), local_user)
+        post.assert_called_once()
+        self.assertEqual(self.st.session_state["_auth_user"], local_user)
+        self.assertNotIn("_auth_source", self.st.session_state)
+        self.assertNotIn("sso_ticket", self.st.query_params)
+        self.st.error.assert_not_called()
+        self.render_login.assert_not_called()
 
     def test_invalid_ticket_format_never_calls_endpoint_and_shows_local_login(self):
         self.st.query_params["sso_ticket"] = "bad-ticket"

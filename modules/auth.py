@@ -188,24 +188,23 @@ def require_auth(permiso: str = None):
     """
     user = get_user()
     if "sso_ticket" in st.query_params:
-        if user:
-            # An existing session wins; discard the unused ticket from the URL.
-            del st.query_params["sso_ticket"]
+        ticket = st.query_params["sso_ticket"]
+        try:
+            sso_user = _consume_sso_ticket(ticket)
+        except Exception:
+            sso_user = None
+        if sso_user:
+            user = sso_user
+            st.session_state["_auth_user"] = user
+            st.session_state["_auth_source"] = "sso"
+            st.session_state.pop("_sso_error", None)
+        elif not user:
+            st.session_state["_sso_error"] = True
         else:
-            ticket = st.query_params["sso_ticket"]
-            try:
-                user = _consume_sso_ticket(ticket)
-            except Exception:
-                user = None
-            if user:
-                st.session_state["_auth_user"] = user
-                st.session_state["_auth_source"] = "sso"
-                st.session_state.pop("_sso_error", None)
-            else:
-                st.session_state["_sso_error"] = True
-            del st.query_params["sso_ticket"]
-            if user:
-                st.rerun()
+            st.session_state.pop("_sso_error", None)
+        del st.query_params["sso_ticket"]
+        if sso_user:
+            st.rerun()
 
     if not user:
         if st.session_state.pop("_sso_error", False):
