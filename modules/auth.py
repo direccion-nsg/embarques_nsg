@@ -9,6 +9,12 @@ Roles y permisos:
   direccion → historial, bandeja, guías (lectura)
 """
 
+import os
+import re
+from collections.abc import Mapping
+from urllib.parse import urlsplit
+
+import requests
 import streamlit as st
 
 # Permisos por rol — cada valor es el conjunto de secciones permitidas
@@ -36,6 +42,70 @@ LANDING_PAGE = {
     "planta":    "pages/7_Planta.py",
     "direccion": "pages/2_Historial.py",
 }
+
+_SSO_TICKET = re.compile(r"[A-Za-z0-9_-]{43}\Z")
+_SSO_ERROR = "No se pudo iniciar sesión desde NSG OPS."
+
+
+def _sso_config() -> tuple[str, str]:
+    """Read optional server-side SSO settings without requiring local secrets."""
+    try:
+        section = st.secrets.get("nsg_ops", {})
+    except Exception:
+        section = {}
+    if not isinstance(section, Mapping):
+        section = {}
+    url = section.get("sso_consume_url") or os.environ.get("NSG_OPS_SSO_CONSUME_URL") or ""
+    secret = section.get("sso_secret") or os.environ.get("NSG_OPS_EMBARQUES_SSO_SECRET") or ""
+    url = url.strip() if isinstance(url, str) else ""
+    secret = secret.strip() if isinstance(secret, str) else ""
+    return url, secret
+
+
+def _consume_sso_ticket(ticket: str) -> dict | None:
+    """Exchange an opaque ticket on the server and validate the legacy user contract."""
+    if not isinstance(ticket, str) or not _SSO_TICKET.fullmatch(ticket):
+        return None
+
+    url, secret = _sso_config()
+    if not url or not secret:
+        return None
+    try:
+        parsed = urlsplit(url)
+        if (
+            parsed.scheme != "https" or not parsed.hostname or
+            parsed.username or parsed.password or parsed.query or parsed.fragment or
+            parsed.path != "/api/sso/consume/EMBARQUES"
+        ):
+            return None
+        response = requests.post(
+            url,
+            headers={"X-NSG-SSO-Secret": secret},
+            json={"ticket": ticket},
+            timeout=5,
+            allow_redirects=False,
+        )
+        if response.status_code != 200:
+            return None
+        identity = response.json()
+    except (ValueError, requests.RequestException):
+        return None
+
+    if not isinstance(identity, dict):
+        return None
+    user_id = identity.get("user_id")
+    email = identity.get("email")
+    name = identity.get("name")
+    role = identity.get("module_role")
+    if (
+        not isinstance(user_id, str) or not user_id.strip() or
+        (email is not None and not isinstance(email, str)) or
+        not isinstance(name, str) or not name.strip() or
+        identity.get("module_code") != "EMBARQUES" or
+        not isinstance(role, str) or role not in ROLES
+    ):
+        return None
+    return {"id": user_id, "email": email, "role": role, "nombre": name}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -95,11 +165,14 @@ def login(email: str, password: str) -> tuple:
 
 def logout():
     """Cierra sesión y limpia session_state."""
-    try:
-        _sb().auth.sign_out()
-    except Exception:
-        pass
+    source = st.session_state.pop("_auth_source", None)
+    if source != "sso":
+        try:
+            _sb().auth.sign_out()
+        except Exception:
+            pass
     st.session_state.pop("_auth_user", None)
+    st.session_state.pop("_sso_error", None)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -114,7 +187,29 @@ def require_auth(permiso: str = None):
     Retorna el dict del usuario si todo está bien.
     """
     user = get_user()
+    if "sso_ticket" in st.query_params:
+        if user:
+            # An existing session wins; discard the unused ticket from the URL.
+            del st.query_params["sso_ticket"]
+        else:
+            ticket = st.query_params["sso_ticket"]
+            try:
+                user = _consume_sso_ticket(ticket)
+            except Exception:
+                user = None
+            if user:
+                st.session_state["_auth_user"] = user
+                st.session_state["_auth_source"] = "sso"
+                st.session_state.pop("_sso_error", None)
+            else:
+                st.session_state["_sso_error"] = True
+            del st.query_params["sso_ticket"]
+            if user:
+                st.rerun()
+
     if not user:
+        if st.session_state.pop("_sso_error", False):
+            st.error(_SSO_ERROR)
         _render_login()
         st.stop()
 
