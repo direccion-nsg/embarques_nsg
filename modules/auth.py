@@ -2,8 +2,8 @@
 Autenticación de usuarios — Supabase Auth con email + contraseña.
 
 Roles y permisos:
-  admin     → todo, incluyendo gestión de usuarios
-  finanzas  → nuevo embarque, historial, catálogos, bandeja, guías
+  admin     → operación y gestión de usuarios; Catálogos se administra en NSG OPS
+  finanzas  → nuevo embarque, historial, bandeja, guías
   ventas    → historial, guías (lectura)
   almacen   → historial (lectura)
   direccion → historial, bandeja, guías (lectura)
@@ -13,8 +13,8 @@ import streamlit as st
 
 # Permisos por rol — cada valor es el conjunto de secciones permitidas
 ROLES = {
-    "admin":     {"nuevo", "historial", "catalogo", "bandeja", "guias", "usuarios", "planta"},
-    "finanzas":  {"nuevo", "historial", "catalogo", "bandeja", "guias"},
+    "admin":     {"nuevo", "historial", "bandeja", "guias", "usuarios", "planta"},
+    "finanzas":  {"nuevo", "historial", "bandeja", "guias"},
     "ventas":    {"historial", "guias"},
     "planta":    {"planta", "historial"},
     "direccion": {"historial", "bandeja", "guias", "planta"},
