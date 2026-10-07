@@ -410,7 +410,7 @@ def get_salida_por_folio(folio_bind: str) -> dict | None:
     conn = get_connection()
     try:
         row = _fetchone(conn,
-            "SELECT * FROM salidas_bind WHERE folio_bind=%s ORDER BY id DESC LIMIT 1",
+            "SELECT * FROM salidas_bind WHERE lower(btrim(folio_bind))=lower(btrim(%s)) ORDER BY id DESC LIMIT 1",
             (folio_bind,),
         )
         if not row:
