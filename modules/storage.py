@@ -1,10 +1,24 @@
 """Supabase Storage para PDFs y evidencias de embarques NSG."""
 
+import logging
 import os
 from supabase import create_client, Client
 
 BUCKET_PDFS        = "embarques-pdfs"
 BUCKET_EVIDENCIAS  = "embarques-evidencias"
+
+# Corte autorizado: Legacy conserva consulta; las escrituras se operan en NSG OPS.
+# Revertir este bloqueo sólo como contingencia autorizada, con NSG OPS sin escrituras.
+LEGACY_STORAGE_READ_ONLY = True
+_logger = logging.getLogger(__name__)
+
+
+def _require_storage_write():
+    if LEGACY_STORAGE_READ_ONLY:
+        raise RuntimeError(
+            "Legacy está en modo de consulta. La carga de documentos está bloqueada "
+            "durante el corte a NSG OPS."
+        )
 
 
 def _creds():
@@ -23,6 +37,11 @@ def _client() -> Client:
 
 def init_storage():
     """Crea los buckets si no existen (idempotente)."""
+    if LEGACY_STORAGE_READ_ONLY:
+        _logger.warning(
+            "LEGACY_STORAGE_READ_ONLY: bucket initialization and document uploads disabled"
+        )
+        return
     c = _client()
     for bucket in [BUCKET_PDFS, BUCKET_EVIDENCIAS]:
         try:
@@ -33,6 +52,7 @@ def init_storage():
 
 def subir_pdf(pdf_bytes: bytes, filename: str) -> str:
     """Sube el PDF al bucket y retorna la ruta en Storage."""
+    _require_storage_write()
     c = _client()
     ruta = f"pdfs/{filename}"
     c.storage.from_(BUCKET_PDFS).upload(
@@ -69,6 +89,7 @@ def descargar_evidencia_bytes(ruta_storage: str) -> bytes:
 
 def subir_evidencia(archivo_bytes: bytes, filename: str) -> str:
     """Sube evidencia (foto/PDF de guía) y retorna la ruta en Storage."""
+    _require_storage_write()
     c = _client()
     ruta = f"evidencias/{filename}"
     ext  = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
